@@ -250,20 +250,24 @@ const S = {
 const SUPA_URL = "https://zpsriwszsuodrpropfas.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpwc3Jpd3N6c3VvZHJwcm9wZmFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTUwMzIsImV4cCI6MjA5Mzc5MTAzMn0.Eam-dmdb9LMN2baK6-QQn0sqLzArFmJBf1WsaPOR1No";
 
-async function supa(path, method = "GET", body = null) {
+async function supa(path, method = "GET", body = null, prefer = null) {
+  const defaultPrefer = method === "POST"
+    ? "return=representation,resolution=merge-duplicates"
+    : method === "PATCH" ? "return=representation" : "";
   const opts = {
     method,
     headers: {
       "apikey": SUPA_KEY,
       "Authorization": "Bearer " + SUPA_KEY,
       "Content-Type": "application/json",
-      "Prefer": method === "POST" ? "return=representation" : "",
+      "Prefer": prefer !== null ? prefer : defaultPrefer,
     },
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(SUPA_URL + "/rest/v1/" + path, opts);
   if (!res.ok) {
     const err = await res.text();
+    console.error("Supabase error:", method, path, err);
     throw new Error(err);
   }
   const text = await res.text();
@@ -310,6 +314,8 @@ const TABLE_MAP = {
 function useStorage(key, init) {
   const [data, setData] = useState(init);
   const [loaded, setLoaded] = useState(false);
+  // Track what IDs exist in DB so we can delete removed records
+  const dbIds = useRef(new Set());
 
   // Load from Supabase on mount
   useEffect(() => {
@@ -319,57 +325,80 @@ function useStorage(key, init) {
         if (!map) { setLoaded(true); return; }
 
         if (key === "pms_weekly") {
-          // weekly_data: load all rows and merge into object
           const rows = await supa("weekly_data?select=week_key,data");
           const merged = {};
           (rows||[]).forEach(r => { merged[r.week_key] = r.data; });
+          // Only use DB data if something exists, else keep init
           if (Object.keys(merged).length > 0) setData(merged);
         } else {
           const rows = await supa(map.table + "?select=*&order=created_at.asc");
-          if (rows && rows.length > 0) setData(rows.map(map.fromRow));
+          if (rows && rows.length > 0) {
+            // DB has data - use it (ignore seed/init)
+            dbIds.current = new Set(rows.map(r => r.id));
+            setData(rows.map(map.fromRow));
+          }
+          // If rows is empty - keep init (seed data) but mark loaded
+          // so user can start adding and it will save
         }
       } catch(e) {
-        console.warn("Supabase load failed, using defaults:", e.message);
+        console.warn("Supabase load failed, using local defaults:", e.message);
       }
       setLoaded(true);
     })();
   }, [key]);
 
-  const save = useCallback(async (val) => {
-    setData(val);
+  const save = useCallback(async (newVal) => {
+    // Update UI immediately (optimistic update)
+    setData(newVal);
+
     try {
       const map = TABLE_MAP[key];
       if (!map) return;
 
       if (key === "pms_weekly") {
-        // Upsert each week_key as a separate row
-        const entries = Object.entries(val);
+        // Upsert each changed week entry
+        const entries = Object.entries(newVal);
         for (const [week_key, wdata] of entries) {
-          await supa("weekly_data?on_conflict=week_key", "POST", {
-            id: week_key, week_key, data: wdata, updated_at: new Date().toISOString()
-          });
+          await supa("weekly_data?on_conflict=week_key", "POST",
+            { id: week_key, week_key, data: wdata, updated_at: new Date().toISOString() }
+          );
         }
       } else {
-        // Upsert all rows - Supabase upsert on primary key
-        const rows = val.map(map.toRow);
-        // Upsert in batches of 50
-        for (let i = 0; i < rows.length; i += 50) {
-          const batch = rows.slice(i, i + 50);
-          await supa(map.table + "?on_conflict=id", "POST", batch);
+        if (!Array.isArray(newVal)) return;
+
+        // 1. Find records to DELETE (were in DB, no longer in newVal)
+        const newIds = new Set(newVal.map(r => r.id));
+        const toDelete = [...dbIds.current].filter(id => !newIds.has(id));
+        for (const id of toDelete) {
+          await supa(`${map.table}?id=eq.${id}`, "DELETE", null, "");
+          dbIds.current.delete(id);
+        }
+
+        // 2. Upsert all current records (insert new + update changed)
+        if (newVal.length > 0) {
+          const rows = newVal.map(map.toRow);
+          for (let i = 0; i < rows.length; i += 50) {
+            const batch = rows.slice(i, i + 50);
+            await supa(`${map.table}?on_conflict=id`, "POST", batch);
+            // Track new IDs
+            batch.forEach(r => dbIds.current.add(r.id));
+          }
         }
       }
+      console.log(`✅ Saved ${key} to Supabase`);
     } catch(e) {
-      console.warn("Supabase save failed:", e.message);
+      console.error("❌ Supabase save failed:", key, e.message);
     }
   }, [key]);
 
   return [data, save, loaded];
 }
 
-// ── Delete helper (used when removing items) ────────────────────────────────
+// ── Delete helper ───────────────────────────────────────────────────────────
 async function supaDelete(table, id) {
   try {
-    await supa(`${table}?id=eq.${id}`, "DELETE");
+    await supa(`${table}?id=eq.${id}`, "DELETE", null, "");
+    console.log(`✅ Deleted ${id} from ${table}`);
   } catch(e) {
     console.warn("Delete failed:", e.message);
   }
