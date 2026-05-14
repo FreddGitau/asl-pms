@@ -606,13 +606,27 @@ function AppInner() {
     const a = [];
     projects.forEach(p => {
       const d = daysUntil(p.contractEnd);
-      if (d !== null && d >= 0 && d <= 30) a.push({type:"contract",level:d<=7?"danger":"warning",msg:`${p.name}: contract ends in ${d} day${d===1?"":"s"}`,pid:p.id});
+      if (d !== null && d >= 0 && d <= 30) a.push({type:"contract",level:d<=7?"danger":"warning",
+        msg:`${p.name}: contract ends in ${d} day${d===1?"":"s"}`,pid:p.id});
       const nd = daysUntil(p.nextPhaseDate);
-      if (nd !== null && nd >= 0 && nd <= 14) a.push({type:"phase",level:nd<=3?"danger":"warning",msg:`${p.name}: next phase "${p.phase}" in ${nd} day${nd===1?"":"s"}`,pid:p.id});
+      if (nd !== null && nd >= 0 && nd <= 14) a.push({type:"phase",level:nd<=3?"danger":"warning",
+        msg:`${p.name}: next phase "${p.phase}" in ${nd} day${nd===1?"":"s"}`,pid:p.id});
       p.milestones?.forEach(m => {
-        if (!m.invoiced) {
-          const md = daysUntil(m.dueDate);
-          if (md !== null && md >= 0 && md <= 14) a.push({type:"invoice",level:md<=3?"danger":"warning",msg:`${p.name} — ${m.name}: invoice due in ${md} days (KES ${fmt(m.amount)})`,pid:p.id});
+        const md = daysUntil(m.dueDate);
+        // Invoice alert (14 days)
+        if (!m.invoiced && md !== null && md >= 0 && md <= 14) {
+          a.push({type:"invoice",level:md<=3?"danger":"warning",
+            msg:`${p.name} — ${m.name}: invoice due in ${md} days (KES ${fmt(m.amount)})`,pid:p.id});
+        }
+        // Document alerts (30 days before milestone due)
+        if (md !== null && md >= 0 && md <= 30 && !m.paid) {
+          (m.documents||[]).forEach(doc => {
+            if (doc.required !== false && !doc.received) {
+              a.push({type:"document",level:md<=7?"danger":"warning",
+                msg:`${p.name} — ${m.name}: document "${doc.name}" required (milestone in ${md} days)`,
+                pid:p.id, docName:doc.name, milestoneName:m.name});
+            }
+          });
         }
       });
     });
@@ -959,32 +973,123 @@ function ProjectModal({proj, onSave, onClose}) {
 
 function MilestonesModal({proj, onSave, onClose}) {
   const [p, setP] = useState({...proj, milestones:[...(proj.milestones||[])]});
-  const add = () => setP(x=>({...x, milestones:[...x.milestones,{id:uid(),name:"",amount:0,dueDate:"",invoiced:false,paid:false}]}));
+  const [expandedId, setExpandedId] = useState(null);
+  const add = () => {
+    const newM = {id:uid(),name:"",amount:0,dueDate:"",invoiced:false,paid:false,documents:[]};
+    setP(x=>({...x, milestones:[...x.milestones, newM]}));
+    setExpandedId(newM.id);
+  };
   const upd = (id,k,v) => setP(x=>({...x, milestones:x.milestones.map(m=>m.id===id?{...m,[k]:v}:m)}));
   const del = (id) => setP(x=>({...x, milestones:x.milestones.filter(m=>m.id!==id)}));
+  const addDoc = (id) => upd(id,"documents",[...(p.milestones.find(m=>m.id===id)?.documents||[]),{id:uid(),name:"",required:true}]);
+  const updDoc = (mId,dId,k,v) => setP(x=>({...x, milestones:x.milestones.map(m=>m.id===mId?{...m,documents:(m.documents||[]).map(d=>d.id===dId?{...d,[k]:v}:d)}:m)}));
+  const delDoc = (mId,dId) => setP(x=>({...x, milestones:x.milestones.map(m=>m.id===mId?{...m,documents:(m.documents||[]).filter(d=>d.id!==dId)}:m)}));
   const total = p.milestones.reduce((s,m)=>s+(+m.amount||0),0);
+
+  const COMMON_DOCS = ["Signed Acceptance Form","Client Sign-off Letter","Invoice","Delivery Note",
+    "Technical Report","Training Attendance Sheet","UAT Sign-off","Go-Live Certificate",
+    "Change Request Form","Project Completion Certificate","LPO/Purchase Order","Status Report"];
+
   return (
     <div style={S.modal} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{...S.modalBox,width:"min(780px,95vw)"}}>
+      <div style={{...S.modalBox,width:"min(820px,95vw)"}}>
         <div style={{fontWeight:700,fontSize:16,color:"#E8EDF2",marginBottom:4}}>Financial Milestones — {proj.name}</div>
-        <div style={{fontSize:12,color:"#4A6480",marginBottom:16}}>Contract Value: KES {fmt(proj.contractValue)} | Milestones Total: KES {fmt(total)}</div>
-        <table style={S.table}>
-          <thead><tr>
-            {["Milestone","Amount (KES)","Due Date","Invoiced","Paid",""].map(h=><th key={h} style={S.th}>{h}</th>)}
-          </tr></thead>
-          <tbody>
-            {p.milestones.map(m=>(
-              <tr key={m.id}>
-                <td style={S.td}><input style={{...S.input,padding:"6px 8px"}} value={m.name} onChange={e=>upd(m.id,"name",e.target.value)} /></td>
-                <td style={S.td}><input style={{...S.input,padding:"6px 8px",width:130}} type="number" value={m.amount||""} onChange={e=>upd(m.id,"amount",+e.target.value)} /></td>
-                <td style={S.td}><input style={{...S.input,padding:"6px 8px",width:130}} type="date" value={m.dueDate||""} onChange={e=>upd(m.id,"dueDate",e.target.value)} /></td>
-                <td style={{...S.td,textAlign:"center"}}><input type="checkbox" checked={m.invoiced} onChange={e=>upd(m.id,"invoiced",e.target.checked)} /></td>
-                <td style={{...S.td,textAlign:"center"}}><input type="checkbox" checked={m.paid} onChange={e=>upd(m.id,"paid",e.target.checked)} /></td>
-                <td style={S.td}><button style={{...S.btn("danger"),padding:"4px 8px",fontSize:11}} onClick={()=>del(m.id)}>×</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{fontSize:12,color:"#4A6480",marginBottom:16}}>
+          Contract Value: KES {fmt(proj.contractValue)} | Milestones Total: KES {fmt(total)}
+          {Math.abs(total-(proj.contractValue||0))>100 && <span style={{color:"#FCA5A5",marginLeft:8}}>⚠ Does not match contract value</span>}
+        </div>
+
+        {p.milestones.map((m,idx)=>{
+          const isOpen = expandedId===m.id;
+          const docCount = (m.documents||[]).length;
+          const days = m.dueDate ? Math.ceil((new Date(m.dueDate)-new Date())/86400000) : null;
+          const alertColor = days!==null&&days<=30&&!m.invoiced ? (days<=7?"#DC2626":"#F59E0B") : null;
+          return (
+            <div key={m.id} style={{marginBottom:8,border:`1px solid ${alertColor||"#263548"}`,borderRadius:8,overflow:"hidden"}}>
+              {/* Milestone header row */}
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#0F1923",cursor:"pointer"}}
+                onClick={()=>setExpandedId(isOpen?null:m.id)}>
+                <span style={{fontWeight:600,color:"#6B8099",fontSize:13,minWidth:20}}>{idx+1}.</span>
+                <input style={{...S.input,flex:1,padding:"5px 8px",fontSize:13}} value={m.name}
+                  placeholder="Milestone name..." onClick={e=>e.stopPropagation()}
+                  onChange={e=>upd(m.id,"name",e.target.value)} />
+                <input style={{...S.input,width:120,padding:"5px 8px",fontSize:13}} type="number"
+                  value={m.amount||""} placeholder="KES" onClick={e=>e.stopPropagation()}
+                  onChange={e=>upd(m.id,"amount",+e.target.value)} />
+                <input style={{...S.input,width:130,padding:"5px 8px",fontSize:12}} type="date"
+                  value={m.dueDate||""} onClick={e=>e.stopPropagation()}
+                  onChange={e=>upd(m.id,"dueDate",e.target.value)} />
+                <div style={{display:"flex",gap:6,alignItems:"center"}} onClick={e=>e.stopPropagation()}>
+                  <label style={{fontSize:11,color:"#6B8099",display:"flex",gap:4,alignItems:"center",cursor:"pointer"}}>
+                    <input type="checkbox" checked={m.invoiced} onChange={e=>upd(m.id,"invoiced",e.target.checked)}/>Inv
+                  </label>
+                  <label style={{fontSize:11,color:"#6B8099",display:"flex",gap:4,alignItems:"center",cursor:"pointer"}}>
+                    <input type="checkbox" checked={m.paid} onChange={e=>upd(m.id,"paid",e.target.checked)}/>Paid
+                  </label>
+                </div>
+                {alertColor && <span style={{fontSize:10,color:alertColor,whiteSpace:"nowrap"}}>{days<=7?"🔴":"🟠"}{days}d</span>}
+                <span style={{fontSize:11,color:"#4A6480",whiteSpace:"nowrap"}}>📎 {docCount} doc{docCount!==1?"s":""}</span>
+                <span style={{fontSize:12,color:"#6B8099"}}>{isOpen?"▲":"▼"}</span>
+                <button style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}} onClick={e=>{e.stopPropagation();del(m.id);}}>×</button>
+              </div>
+
+              {/* Expanded: Documents required section */}
+              {isOpen && (
+                <div style={{padding:"14px 16px",background:"#131F2E",borderTop:"1px solid #1E2A36"}}>
+                  <div style={{fontWeight:600,color:"#E8EDF2",fontSize:13,marginBottom:10}}>
+                    📎 Required Documents for this Milestone
+                    <span style={{fontSize:11,color:"#4A6480",fontWeight:400,marginLeft:8}}>
+                      (Alerts fire 30 days before due date if documents not marked received)
+                    </span>
+                  </div>
+
+                  {/* Quick-add common documents */}
+                  <div style={{marginBottom:10}}>
+                    <div style={S.label}>Quick add common documents</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
+                      {COMMON_DOCS.filter(d=>!(m.documents||[]).some(x=>x.name===d)).map(d=>(
+                        <span key={d} style={{fontSize:11,padding:"3px 8px",borderRadius:12,
+                          background:"#1E2A36",color:"#6B8099",cursor:"pointer",border:"0.5px solid #263548"}}
+                          onClick={()=>setP(x=>({...x,milestones:x.milestones.map(ms=>ms.id===m.id?
+                            {...ms,documents:[...(ms.documents||[]),{id:uid(),name:d,required:true,received:false}]}:ms)}))}>
+                          + {d}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Document list */}
+                  {(m.documents||[]).length===0 && (
+                    <div style={{fontSize:12,color:"#3D5266",fontStyle:"italic",marginBottom:8}}>
+                      No documents added yet. Use quick-add above or the button below.
+                    </div>
+                  )}
+                  {(m.documents||[]).map(d=>(
+                    <div key={d.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <input style={{...S.input,flex:1,padding:"5px 8px",fontSize:12}} value={d.name}
+                        placeholder="Document name..." onChange={e=>updDoc(m.id,d.id,"name",e.target.value)} />
+                      <label style={{fontSize:11,color:"#6B8099",display:"flex",gap:4,alignItems:"center",
+                        whiteSpace:"nowrap",cursor:"pointer"}}>
+                        <input type="checkbox" checked={d.required!==false}
+                          onChange={e=>updDoc(m.id,d.id,"required",e.target.checked)}/>Required
+                      </label>
+                      <label style={{fontSize:11,color:d.received?"#6EE7B7":"#6B8099",display:"flex",gap:4,
+                        alignItems:"center",whiteSpace:"nowrap",cursor:"pointer"}}>
+                        <input type="checkbox" checked={!!d.received}
+                          onChange={e=>updDoc(m.id,d.id,"received",e.target.checked)}/>Received
+                      </label>
+                      <button style={{...S.btn("danger"),padding:"3px 7px",fontSize:11}}
+                        onClick={()=>delDoc(m.id,d.id)}>×</button>
+                    </div>
+                  ))}
+                  <button style={{...S.btn(),fontSize:11,padding:"5px 10px",marginTop:4}}
+                    onClick={()=>addDoc(m.id)}>+ Add Document</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
         <div style={{display:"flex",justifyContent:"space-between",marginTop:14}}>
           <button style={S.btn()} onClick={add}>+ Add Milestone</button>
           <div style={{display:"flex",gap:8}}>
@@ -1627,25 +1732,57 @@ function ProjectStatusReport({projects, techs, allocations, weeklyData}) {
           {/* ── Financial Milestones ── */}
           {(proj.milestones||[]).length>0 && (
             <div style={{...S.card,marginBottom:12}}>
-              <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>💰 Financial Milestones</div>
-              {proj.milestones.map((m,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",
-                  borderBottom:"0.5px solid #1A2535",fontSize:13}}>
-                  <span style={{fontSize:16}}>{m.paid?"✅":m.invoiced?"📤":"⏳"}</span>
-                  <div style={{flex:1}}>
-                    <div style={{color:"#C8D8E8",fontWeight:500}}>{m.name}</div>
-                    <div style={{fontSize:11,color:"#4A6480"}}>Due: {m.dueDate||"TBD"}</div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontWeight:600,color:m.paid?"#10B981":m.invoiced?"#F59E0B":"#6B8099"}}>
-                      KES {(m.amount||0).toLocaleString()}
+              <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>💰 Financial Milestones & Required Documents</div>
+              {proj.milestones.map((m,i)=>{
+                const days=m.dueDate?Math.ceil((new Date(m.dueDate)-new Date())/86400000):null;
+                const docs=m.documents||[];
+                const pendingDocs=docs.filter(d=>d.required!==false&&!d.received);
+                return (
+                  <div key={i} style={{marginBottom:10,padding:"10px 12px",background:"#0F1923",
+                    borderRadius:8,borderLeft:`3px solid ${m.paid?"#10B981":m.invoiced?"#F59E0B":
+                    days!==null&&days<=30&&!m.invoiced?"#DC2626":"#263548"}`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:docs.length>0?8:0}}>
+                      <span style={{fontSize:16}}>{m.paid?"✅":m.invoiced?"📤":"⏳"}</span>
+                      <div style={{flex:1}}>
+                        <div style={{color:"#C8D8E8",fontWeight:600,fontSize:13}}>{m.name}</div>
+                        <div style={{fontSize:11,color:"#4A6480",marginTop:2}}>
+                          Due: {m.dueDate||"TBD"}
+                          {days!==null&&!m.paid&&<span style={{color:days<=7?"#FCA5A5":days<=30?"#FCD34D":"#4A6480",marginLeft:6}}>({days}d)</span>}
+                        </div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontWeight:700,color:m.paid?"#10B981":m.invoiced?"#F59E0B":"#6B8099",fontSize:14}}>
+                          KES {(m.amount||0).toLocaleString()}
+                        </div>
+                        <div style={{fontSize:10,color:m.paid?"#10B981":m.invoiced?"#F59E0B":"#4A6480"}}>
+                          {m.paid?"Paid":m.invoiced?"Invoiced":"Pending"}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{fontSize:10,color:m.paid?"#10B981":m.invoiced?"#F59E0B":"#4A6480"}}>
-                      {m.paid?"Paid":m.invoiced?"Invoiced":"Pending"}
-                    </div>
+                    {/* Required documents */}
+                    {docs.length>0 && (
+                      <div style={{borderTop:"0.5px solid #1E2A36",paddingTop:8}}>
+                        <div style={{fontSize:11,fontWeight:600,color:"#6B8099",marginBottom:6,display:"flex",justifyContent:"space-between"}}>
+                          <span>📎 Required Documents ({docs.filter(d=>d.received).length}/{docs.length} received)</span>
+                          {pendingDocs.length>0&&days!==null&&days<=30&&(
+                            <span style={{color:days<=7?"#FCA5A5":"#FCD34D"}}>⚠ {pendingDocs.length} pending</span>
+                          )}
+                        </div>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                          {docs.map(d=>(
+                            <span key={d.id} style={{fontSize:11,padding:"2px 8px",borderRadius:12,
+                              background:d.received?"#052E16":d.required!==false?"#2D0F0F":"#1E2A36",
+                              color:d.received?"#6EE7B7":d.required!==false?"#FCA5A5":"#6B8099",
+                              border:`0.5px solid ${d.received?"#276221":d.required!==false?"#7F1D1D":"#263548"}`}}>
+                              {d.received?"✅":"⬜"} {d.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -2173,21 +2310,38 @@ function AlertsPage({alerts, projects, setPage}) {
   return (
     <div>
       <div style={{marginBottom:20}}><div style={S.hdr}>Alerts</div><div style={S.subhdr}>{alerts.length} active alert{alerts.length!==1?"s":""}</div></div>
-      {alerts.map((a,i)=>(
-        <div key={i} style={{...S.card,marginBottom:8,borderLeft:`3px solid ${a.level==="danger"?"#DC2626":"#F59E0B"}`,
-          background:a.level==="danger"?"#1A0A0A":"#1A1200"}}>
-          <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-            <span style={{fontSize:20}}>{a.level==="danger"?"🔴":"🟠"}</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:600,color:a.level==="danger"?"#FCA5A5":"#FCD34D",fontSize:13}}>{a.msg}</div>
-              <div style={{fontSize:11,color:"#4A6480",marginTop:2,textTransform:"uppercase",letterSpacing:"0.05em"}}>
-                {a.type==="contract"?"Contract expiry":a.type==="phase"?"Phase milestone":"Invoice due"}
-              </div>
+      {/* Group alerts by type */}
+      {["danger","warning"].map(level => {
+        const levelAlerts = alerts.filter(a=>a.level===level);
+        if (!levelAlerts.length) return null;
+        return (
+          <div key={level} style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:600,color:level==="danger"?"#FCA5A5":"#FCD34D",
+              textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>
+              {level==="danger"?"🔴 Critical":"🟠 Warning"} — {levelAlerts.length} alert{levelAlerts.length!==1?"s":""}
             </div>
-            <button style={{...S.btn(),fontSize:12,padding:"5px 10px"}} onClick={()=>setPage("projects")}>View →</button>
+            {levelAlerts.map((a,i)=>(
+              <div key={i} style={{...S.card,marginBottom:6,
+                borderLeft:`3px solid ${a.level==="danger"?"#DC2626":"#F59E0B"}`,
+                background:a.level==="danger"?"#1A0A0A":"#1A1200"}}>
+                <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                  <span style={{fontSize:18,marginTop:1}}>
+                    {a.type==="document"?"📎":a.type==="contract"?"📅":a.type==="phase"?"🔄":"💰"}
+                  </span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,color:a.level==="danger"?"#FCA5A5":"#FCD34D",fontSize:13}}>{a.msg}</div>
+                    <div style={{fontSize:11,color:"#4A6480",marginTop:2,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                      {a.type==="contract"?"Contract expiry":a.type==="phase"?"Phase milestone":
+                       a.type==="document"?"Document required for milestone":"Invoice due"}
+                    </div>
+                  </div>
+                  <button style={{...S.btn(),fontSize:12,padding:"5px 10px"}} onClick={()=>setPage("projects")}>View →</button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
