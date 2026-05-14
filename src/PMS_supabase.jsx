@@ -86,7 +86,26 @@ const SEED_PROJECTS = [
   {id:"P005",name:"NEPAD/APRM Kenya",client:"NEPAD/APRM KENYA SECRETARIAT",status:"Active",mode:"Onsite",
    contractStart:"2025-04-01",contractEnd:"2025-06-30",contractValue:850000,currency:"KES",
    phase:"EDMS Training",nextPhaseDate:"2025-06-01",
-   milestones:[{id:"M1",name:"Training Delivery",amount:425000,dueDate:"2025-05-15",invoiced:false,paid:false},{id:"M2",name:"Final Sign-off",amount:425000,dueDate:"2025-06-30",invoiced:false,paid:false}]},
+   milestones:[{id:"M1",name:"Training Delivery",amount:425000,dueDate:"2025-05-15",invoiced:false,paid:false},{id:"M2",name:"Final Sign-off",amount:425000,dueDate:"2025-06-30",invoiced:false,paid:false}]},  {id:"P009",name:"AUA",client:"Adventist University of Africa",status:"Active",mode:"Onsite",contractStart:"2025-03-01",contractEnd:"2025-09-30",contractValue:2400000,currency:"KES",phase:"UAT Review",nextPhaseDate:"2025-07-01",milestones:[]},
+  {id:"P010",name:"KCAU",client:"KCA University",status:"Active",mode:"Onsite",contractStart:"2025-02-01",contractEnd:"2025-07-31",contractValue:1600000,currency:"KES",phase:"Module Review",nextPhaseDate:"2025-06-01",milestones:[]},
+  {id:"P011",name:"KRB",client:"Kenya Roads Board",status:"Active",mode:"Offsite",contractStart:"2025-01-01",contractEnd:"2025-08-31",contractValue:1400000,currency:"KES",phase:"Portal Issues Resolution",nextPhaseDate:"2025-06-15",milestones:[]},
+  {id:"P012",name:"NGAAF",client:"NGAAF",status:"Active",mode:"Onsite",contractStart:"2025-04-01",contractEnd:"2025-10-31",contractValue:950000,currency:"KES",phase:"Post Go-Live Support",nextPhaseDate:"2025-07-01",milestones:[]},
+  {id:"P013",name:"KCIC",client:"KENYA CLIMATE INNOVATION CENTRE",status:"Active",mode:"Onsite",contractStart:"2025-03-15",contractEnd:"2025-08-15",contractValue:1100000,currency:"KES",phase:"Module Roll-out",nextPhaseDate:"2025-06-15",milestones:[]},
+  {id:"P014",name:"Egoji",client:"Egoji Teachers College",status:"Active",mode:"Onsite",contractStart:"2025-01-15",contractEnd:"2025-08-31",contractValue:1300000,currency:"KES",phase:"QA & Training",nextPhaseDate:"2025-06-01",milestones:[]},
+  {id:"P015",name:"Meru",client:"Meru University of Science and Technology",status:"Active",mode:"Onsite",contractStart:"2025-02-01",contractEnd:"2025-07-31",contractValue:1750000,currency:"KES",phase:"Data Migration",nextPhaseDate:"2025-06-01",milestones:[]},
+  {id:"P016",name:"EASA",client:"East Africa School Of Aviation",status:"Active",mode:"Onsite",contractStart:"2025-01-01",contractEnd:"2025-07-31",contractValue:2200000,currency:"KES",phase:"Issue Resolution (pre-handover)",nextPhaseDate:"2025-06-01",milestones:[]},
+  {id:"P017",name:"Kipre",client:"Kipre",status:"Active",mode:"Onsite",contractStart:"2025-03-01",contractEnd:"2025-08-31",contractValue:900000,currency:"KES",phase:"Finance Issue Resolution",nextPhaseDate:"2025-07-01",milestones:[]},
+  {id:"P018",name:"Tharaka",client:"Tharaka University",status:"Active",mode:"Offsite",contractStart:"2025-02-01",contractEnd:"2025-08-31",contractValue:1500000,currency:"KES",phase:"Issues Resolution",nextPhaseDate:"2025-06-15",milestones:[]},
+  {id:"P019",name:"Karatina",client:"Karatina University",status:"Active",mode:"Onsite",contractStart:"2025-01-15",contractEnd:"2025-07-31",contractValue:1800000,currency:"KES",phase:"Issue Resolution & Sign-off",nextPhaseDate:"2025-07-01",milestones:[]},
+  {id:"P020",name:"Embu University",client:"Embu University",status:"Active",mode:"Hybrid",contractStart:"2025-03-01",contractEnd:"2025-09-30",contractValue:1600000,currency:"KES",phase:"Finance Sign-off",nextPhaseDate:"2025-07-15",milestones:[]},
+  {id:"P021",name:"CAK",client:"Competition Authority Of Kenya",status:"Active",mode:"Onsite",contractStart:"2025-01-01",contractEnd:"2025-06-30",contractValue:2800000,currency:"KES",phase:"Issue Resolution",nextPhaseDate:"2025-05-31",milestones:[]},
+  {id:"P022",name:"KEFRI",client:"Kenya Forest Research Institute",status:"Active",mode:"Onsite",contractStart:"2025-02-15",contractEnd:"2025-07-31",contractValue:1200000,currency:"KES",phase:"Issue Resolution",nextPhaseDate:"2025-06-15",milestones:[]},
+  {id:"P023",name:"Kenivest",client:"Kenya Investment Authority",status:"Active",mode:"Onsite",contractStart:"2025-03-01",contractEnd:"2025-09-30",contractValue:1400000,currency:"KES",phase:"Module Roll-out",nextPhaseDate:"2025-07-01",milestones:[]},
+  {id:"P024",name:"NIBS",client:"NIBS Technical College",status:"Active",mode:"Offsite",contractStart:"2025-01-01",contractEnd:"2025-07-31",contractValue:1100000,currency:"KES",phase:"QA Readiness & QA Exercise",nextPhaseDate:"2025-06-01",milestones:[]},
+  {id:"P025",name:"KUCCPS",client:"Kenya Universities and Colleges Central Placement",status:"Active",mode:"Offsite",contractStart:"2025-02-01",contractEnd:"2025-09-30",contractValue:3200000,currency:"KES",phase:"Supply Chain Issue Resolution, Conduct UAT",nextPhaseDate:"2025-07-01",milestones:[]},
+  {id:"P026",name:"AAAG",client:"AAAG",status:"Active",mode:"Offsite",contractStart:"2025-03-15",contractEnd:"2025-06-30",contractValue:750000,currency:"KES",phase:"FRD Compilation",nextPhaseDate:"2025-06-01",milestones:[]},
+  {id:"P027",name:"Biovax",client:"Kenya Biovax",status:"Active",mode:"Offsite",contractStart:"2025-01-01",contractEnd:"2025-09-30",contractValue:3500000,currency:"KES",phase:"Data Migration & UAT Issue Resolution",nextPhaseDate:"2025-07-01",milestones:[]},
+
 ];
 
 const SEED_DELIVERABLES = [
@@ -99,6 +118,37 @@ const SEED_DELIVERABLES = [
   "System Testing","Documentation","Change Management",
 ];
 
+
+
+/* ─── END-WEEK DATA (8 May 2026) ────────────────────────────────── */
+const END_WEEK_DATA = {
+  "Meru":               [0,1,2,3],
+  "AAAG":               [0,1,3],
+  "Catholic University":[0,1,3],
+  "EASA":               [0,1,2],
+  "KRB":                [0,1,2],
+  "Leonardo":           [0,1,3],
+  "Zetech":             [0,1,2],
+  "MUA":                [1,2,4],
+  "KCIC":               [0,1],
+  "KEFRI":              [0,1],
+  "Kenivest":           [1,2],
+  "NEPAD":              [0,1],
+  "Tharaka":            [0,2],
+  "Alupe University":   [1,4],
+  "Biovax":             [0,1],
+  "NGAAF":              [0],
+  "CAK":                [0],
+  "Egoji":              [2],
+  "KCAU":               [0],
+  "NIBS":               [1],
+  "AUA":                [],
+  "Embu University":    [],
+  "Karatina":           [],
+  "Kipre":              [],
+  "KUCCPS":             [],
+  "SEPU":               [],
+};
 
 /* ─── SEED WEEKLY DATA (Midweek 7 May 2026) ─────────────────────────────── */
 // Pre-populated from actual midweek review results
@@ -149,6 +199,63 @@ const MIDWEEK_NOTES_SEED = {
   "Zetech_1":"Ongoing",
   "Tharaka_1":"Resolved",
 };
+
+
+/* ─── SEED ALLOCATIONS (26 projects — Week 4–8 May 2026) ────────── */
+const SEED_ALLOCATIONS = [
+  {id:"A001",projectId:"P006",techId:"ASL-PF025",deliverable:"Go-Live Support",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Confirm all modules live in Procurement, HR, academics, finance & Payroll","Resolve day-1/day-2 go-live issues logged by users","Validate payroll run accuracy","Document & close each issue","Issue report signed by user on Go live status"]},
+  {id:"A002",projectId:"P001",techId:"ASL-PF043",deliverable:"Training & Module Roll-out",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Deliver end-user training on all assigned modules","Achieve ≥80% issue resolution per session","Complete module configuration & activation","Collect & file signed training report, attendance sheets submit to PMO","Raise post-training issues for resolution"]},
+  {id:"A003",projectId:"P007",techId:"ASL-PF031",deliverable:"Issue Resolution",mode:"Onsite",dateFrom:"2026-05-07",dateTo:"2026-05-08",notes:"",
+   tasks:["Review & confirm full pending-issue register","Resolve ≥95% of logged issues","Obtain client sign-off on each resolved item and submit to PMO","Escalate unresolved items with root-cause note"]},
+  {id:"A004",projectId:"P005",techId:"ASL-PF072",deliverable:"EDMS Training",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-04",notes:"",
+   tasks:["Conduct full EDMS end-user training (4 May)","Distribute user manuals / quick-reference guides","Capture training feedback form","Submit post-training summary report to PMO"]},
+  {id:"A005",projectId:"P004",techId:"ASL-PF049",deliverable:"Issues Resolution",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Triage and categorise all pending issues by severity","Resolve all critical issues by Wed","Provide resolution status signed by client lead to PMO","Obtain written acceptance for each closed item and submit"]},
+  {id:"A006",projectId:"P018",techId:"ASL-PF025",deliverable:"Issues Resolution",mode:"Offsite",dateFrom:"2026-05-04",dateTo:"2026-05-06",notes:"",
+   tasks:["Joint issue review session with client (4 May)","Resolve shared/cross-module issues, achieve ≥95% of logged issues","Confirm resolution with client and document","Hand over resolved issue log before close of 6 May"]},
+  {id:"A007",projectId:"P008",techId:"ASL-PF059",deliverable:"Go-Live Support",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-06",notes:"",
+   tasks:["Support live operations on all active modules","Resolve go-live critical issues","Initiate module sign-off process with client PM","Go live for sales and projects modules"]},
+  {id:"A008",projectId:"P009",techId:"ASL-PF054",deliverable:"UAT Review",mode:"Onsite",dateFrom:"2026-05-07",dateTo:"2026-05-08",notes:"",
+   tasks:["Conduct structured UAT review – Finance module (7 May)","Conduct structured UAT review – Academic module (8 May)","Log all UAT findings in issue register","Classify findings: Bug / Enhancement / Training gap","Produce UAT review summary report and submit to PMO"]},
+  {id:"A009",projectId:"P010",techId:"ASL-PF063",deliverable:"Module Review",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-05",notes:"",
+   tasks:["Review module configurations against client requirements","Identify gaps and raise change/fix requests","Conduct reviews for Finance / Audit / HR/Operations","Obtain client acknowledgement of review outcome"]},
+  {id:"A010",projectId:"P011",techId:"ASL-PF035",deliverable:"Portal Issues Resolution",mode:"Offsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Reproduce & confirm all reported portal issues","Apply fixes / patches","Conduct regression tests post-fix","Share resolution signed report with client by Fri"]},
+  {id:"A011",projectId:"P012",techId:"ASL-PF060",deliverable:"Post Go-Live Support",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Provide daily hypercare support to users","Log & resolve all issues","Compile daily support summary"]},
+  {id:"A012",projectId:"P013",techId:"ASL-PF027",deliverable:"Module Roll-out",mode:"Onsite",dateFrom:"2026-05-05",dateTo:"2026-05-07",notes:"",
+   tasks:["Conduct module configuration readiness check (5 May)","Deliver module training to key users","Activate modules in production environment","Collect signed roll-out acceptance by 7 May"]},
+  {id:"A013",projectId:"P014",techId:"ASL-PF044",deliverable:"QA & Training",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Conduct full QA exercise (4 May) – log all defects","Prioritise & fix critical QA findings","Deliver onsite training (5–8 May)","Obtain signed QA sign-off, training attendance sheets and Training report"]},
+  {id:"A014",projectId:"P015",techId:"ASL-PF054",deliverable:"Data Migration",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-06",notes:"",
+   tasks:["Conduct data migration scoping & mapping session","Execute data migration trial run","Validate migrated data against source records","Document discrepancies & agree on resolution approach by 6 May"]},
+  {id:"A015",projectId:"P016",techId:"ASL-PF061",deliverable:"Issue Resolution (pre-handover)",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Finalise and freeze the pre-handover issue list","Resolve 100% of listed issues before handover","Conduct client walkthrough of resolved items","Compile report on all resolved issues signed by client by Fri"]},
+  {id:"A016",projectId:"P017",techId:"ASL-PF041",deliverable:"Finance Issue Resolution",mode:"Onsite",dateFrom:"2026-05-05",dateTo:"2026-05-08",notes:"",
+   tasks:["Review listed Finance issues with client (5 May)","Resolve all listed finance issues","Test & validate Finance workflows post-fix","Obtain client sign-off on resolved Finance issues"]},
+  {id:"A017",projectId:"P019",techId:"ASL-PF009",deliverable:"Issue Resolution & Sign-off",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-07",notes:"",
+   tasks:["Resolve all outstanding issues (4–5 May – Frank)","Conduct sign-off readiness review (5–7 May – Mercy)","Obtain departmental sign-off forms","Submit signed sign-off package to PMO by 7 May"]},
+  {id:"A018",projectId:"P020",techId:"ASL-PF009",deliverable:"Finance Sign-off",mode:"Hybrid",dateFrom:"2026-05-06",dateTo:"2026-05-08",notes:"",
+   tasks:["Conduct Finance issue resolution sessions (6 May)","Demo resolved items to Finance HOD","Obtain signed Finance module sign-off","File sign-off document with PMO"]},
+  {id:"A019",projectId:"P021",techId:"ASL-PF026",deliverable:"Issue Resolution",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-04",notes:"",
+   tasks:["Confirm and prioritise issue list with client (4 May)","Resolve all issues on 4 May","Conduct verification walkthrough with client","Obtain written closure confirmation signed by client"]},
+  {id:"A020",projectId:"P022",techId:"ASL-PF026",deliverable:"Issue Resolution",mode:"Onsite",dateFrom:"2026-05-05",dateTo:"2026-05-07",notes:"",
+   tasks:["Triage and confirm all open issues (5 May)","Resolve all issues by 7 May","Run system tests post-resolution","Obtain client closure sign-off and submit"]},
+  {id:"A021",projectId:"P023",techId:"ASL-PF010",deliverable:"Module Roll-out",mode:"Onsite",dateFrom:"2026-05-06",dateTo:"2026-05-08",notes:"",
+   tasks:["Deliver Finance module training (6 May)","Deliver Procurement module training","Activate & validate both modules in production","Collect signed module acceptance forms by 8 May"]},
+  {id:"A022",projectId:"P024",techId:"ASL-PF058",deliverable:"QA Readiness & QA Exercise",mode:"Offsite",dateFrom:"2026-05-04",dateTo:"2026-05-06",notes:"",
+   tasks:["Complete all customisation tasks (4–5 May)","Conduct internal readiness review (5 May)","Conduct full QA exercise","Log QA findings & prioritise fixes","Share QA report"]},
+  {id:"A023",projectId:"P025",techId:"ASL-PF020",deliverable:"Supply Chain Issue Resolution, Conduct UAT",mode:"Offsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Conduct joint issue review session with client","Resolve all listed Supply Chain issues","Conduct user acceptance testing for HR and Finance modules","Submit UAT report summary report by Fri 8"]},
+  {id:"A024",projectId:"P026",techId:"ASL-PF011",deliverable:"FRD Compilation",mode:"Offsite",dateFrom:"2026-05-04",dateTo:"2026-05-06",notes:"",
+   tasks:["Gather all requirement inputs from stakeholders","Draft FRD document structure & content","Conduct internal review of draft FRD","Submit final FRD for client review by 6 May"]},
+  {id:"A025",projectId:"P027",techId:"ASL-PF026",deliverable:"Data Migration & UAT Issue Resolution",mode:"Offsite",dateFrom:"2026-05-04",dateTo:"2026-05-08",notes:"",
+   tasks:["Execute data migration & validate records","Reconcile migrated data vs source (≥98% accuracy)","Resolve all listed UAT issues including ESS portal","Conduct UAT re-test on resolved items","Obtain client UAT closure sign-offs"]},
+  {id:"A026",projectId:"P002",techId:"ASL-PF063",deliverable:"Go-Live Support",mode:"Onsite",dateFrom:"2026-05-04",dateTo:"2026-05-06",notes:"",
+   tasks:["Provide onsite go-live hypercare support (4–6 May)","Resolve all critical issues","Maintain incident log","Prepare go-live status report by close of 6 May"]},
+];
 
 const ALL_PROJECTS_LIST = [
   "Abony Dairy Ltd","Adventist University of Africa","Alupe University","Assets Recovery Agency",
@@ -435,7 +542,7 @@ function AppInner() {
   const [showChangePin, setShowChangePin] = useState(false);
   const [techs, saveTechs, techsLoaded] = useStorage("pms_techs", SEED_TECHS);
   const [projects, saveProjects, projLoaded] = useStorage("pms_projects", SEED_PROJECTS);
-  const [allocations, saveAllocs] = useStorage("pms_allocs", []);
+  const [allocations, saveAllocs] = useStorage("pms_allocs", SEED_ALLOCATIONS);
   const [weeklyData, saveWeekly, weeklyLoaded] = useStorage("pms_weekly", {});
 
   // Seed midweek data from actual review results (runs once when allocations load)
@@ -445,27 +552,50 @@ function AppInner() {
     const KEY  = `${WEEK}_midweek`;
     // Only seed if no data exists yet for this week
     const existing = weeklyData[KEY];
-    if (existing && Object.keys(existing).length > 0) return;
+    const existingEnd = weeklyData[`${WEEK}_endweek`];
+    if (existing && Object.keys(existing).length > 0 &&
+        existingEnd && Object.keys(existingEnd).length > 0) return;
+    // Use actual allocations OR seed allocations to build weekly data
+    const allocsToUse = allocations.length > 0 ? allocations : SEED_ALLOCATIONS;
+
     const seeded = {};
-    allocations.forEach(a => {
-      const proj = projects.find(p => p.id === a.projectId);
+    const seededEnd = {};
+    allocsToUse.forEach(a => {
+      const proj = [...projects,...SEED_PROJECTS].find(p => p.id === a.projectId);
       const projName = proj?.name || "";
-      const results = MIDWEEK_REVIEW[projName];
-      if (!results) return;
+      const midResults = MIDWEEK_REVIEW[projName];
+      const endDoneIdx = END_WEEK_DATA[projName] || [];
       const tasks = a.tasks?.length ? a.tasks : [a.deliverable];
+
+      // Midweek seed
+      if (midResults) {
+        tasks.forEach((_, ti) => {
+          const st = midResults[ti];
+          if (!st) return;
+          const noteKey = `${projName}_${ti}`;
+          seeded[`${a.id}_${ti}`] = {
+            status: st === "done" ? "✅ Done" : "❌ Not Done",
+            note: MIDWEEK_NOTES_SEED[noteKey] || ""
+          };
+        });
+        seeded[`${a.id}_client`] = "Available";
+      }
+
+      // End-week seed
       tasks.forEach((_, ti) => {
-        const st = results[ti];
-        if (!st) return;
-        const noteKey = `${projName}_${ti}`;
-        seeded[`${a.id}_${ti}`] = {
-          status: st === "done" ? "✅ Done" : "❌ Not Done",
-          note: MIDWEEK_NOTES_SEED[noteKey] || ""
+        seededEnd[`${a.id}_${ti}`] = {
+          status: endDoneIdx.includes(ti) ? "✅ Done" : "❌ Not Done",
+          note: ""
         };
       });
-      seeded[`${a.id}_client`] = "Available";
+      seededEnd[`${a.id}_client`] = "Available";
     });
-    if (Object.keys(seeded).length > 0) {
-      saveWeekly({ ...weeklyData, [KEY]: seeded });
+
+    const newWeekly = { ...weeklyData };
+    if (Object.keys(seeded).length > 0) newWeekly[KEY] = seeded;
+    if (Object.keys(seededEnd).length > 0) newWeekly[`${WEEK}_endweek`] = seededEnd;
+    if (Object.keys(seeded).length > 0 || Object.keys(seededEnd).length > 0) {
+      saveWeekly(newWeekly);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weeklyLoaded, allocations.length]);
@@ -1017,7 +1147,16 @@ function Allocations({allocations, saveAllocs, projects, techs}) {
                     </td>
                     <td style={S.td}><span style={tech?S.badge(rc.bg,rc.fg):{}}>{tech?.role||"—"}</span></td>
                     <td style={{...S.td,maxWidth:160}}><span style={{fontSize:12,color:"#60A5FA"}}>{a.deliverable}</span></td>
-                    <td style={{...S.td,maxWidth:200,fontSize:11,color:"#4A6480"}}>{(a.tasks||[]).join("; ")||"—"}</td>
+                    <td style={{...S.td,maxWidth:200}}>
+                      <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                        {(a.tasks||[a.deliverable]).map((task,ti)=>(
+                          <div key={ti} style={{fontSize:11,display:"flex",alignItems:"center",gap:4}}>
+                            <span style={{fontSize:12}}>⬜</span>
+                            <span style={{color:"#C8D8E8"}}>{task}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
                     <td style={S.td}>{a.mode}</td>
                     <td style={{...S.td,fontSize:11,color:"#4A6480",whiteSpace:"nowrap"}}>{a.dateFrom} → {a.dateTo}</td>
                     <td style={S.td}><button style={{...S.btn("danger"),padding:"4px 8px",fontSize:11}} onClick={()=>del(a.id)}>×</button></td>
@@ -1036,13 +1175,16 @@ function Allocations({allocations, saveAllocs, projects, techs}) {
 
 function AllocationModal({projects, techs, onSave, onClose}) {
   const [f, setF] = useState({projectId:"",techId:"",deliverable:"",tasks:[""],mode:"Onsite",dateFrom:"",dateTo:"",notes:""});
+  const [milestoneReport, setMilestoneReport] = useState({enabled:false,milestoneName:"",invoiceAmount:"",invoiceDueDate:"",invoiceNotes:""});
   const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const setMR = (k,v) => setMilestoneReport(p=>({...p,[k]:v}));
   const setTask = (i,v) => setF(p=>({...p, tasks:p.tasks.map((t,j)=>j===i?v:t)}));
   const addTask = () => setF(p=>({...p, tasks:[...p.tasks,""]}));
   const delTask = (i) => setF(p=>({...p, tasks:p.tasks.filter((_,j)=>j!==i)}));
+  const selProj = projects.find(p=>p.id===f.projectId);
   return (
     <div style={S.modal} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={S.modalBox}>
+      <div style={{...S.modalBox,width:"min(700px,95vw)"}}>
         <div style={{fontWeight:700,fontSize:16,color:"#E8EDF2",marginBottom:20}}>New Allocation</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
           <div style={{gridColumn:"1/-1"}}><div style={S.label}>Project</div>
@@ -1050,6 +1192,9 @@ function AllocationModal({projects, techs, onSave, onClose}) {
               <option value="">Select project...</option>
               {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
+            {selProj && <div style={{fontSize:11,color:"#4A6480",marginTop:4}}>
+              Phase: {selProj.phase} · Contract: {selProj.contractStart} → {selProj.contractEnd} · KES {(selProj.contractValue||0).toLocaleString()}
+            </div>}
           </div>
           <div><div style={S.label}>Technician</div>
             <select style={S.select} value={f.techId} onChange={e=>set("techId",e.target.value)}>
@@ -1069,6 +1214,7 @@ function AllocationModal({projects, techs, onSave, onClose}) {
             </select>
           </div>
           <div><div style={S.label}>Date From</div><input style={S.input} type="date" value={f.dateFrom} onChange={e=>set("dateFrom",e.target.value)} /></div>
+          <div><div style={S.label}>Date To</div><input style={S.input} type="date" value={f.dateTo} onChange={e=>set("dateTo",e.target.value)} /></div>
           <div style={{gridColumn:"1/-1"}}>
             <div style={S.label}>Tasks for this deliverable</div>
             {f.tasks.map((t,i)=>(
@@ -1080,9 +1226,62 @@ function AllocationModal({projects, techs, onSave, onClose}) {
             <button style={{...S.btn(),fontSize:12,padding:"6px 12px"}} onClick={addTask}>+ Add Task</button>
           </div>
         </div>
+
+        {/* ── Milestone Report Section ── */}
+        <div style={{marginTop:16,border:"1px solid #263548",borderRadius:8,overflow:"hidden"}}>
+          <div style={{background:"#1E2A36",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}}
+            onClick={()=>setMR("enabled",!milestoneReport.enabled)}>
+            <div style={{fontSize:13,fontWeight:600,color:"#60A5FA"}}>📋 Upcoming Milestone / Invoice Report</div>
+            <div style={{fontSize:12,color:"#6B8099"}}>{milestoneReport.enabled?"▲ Hide":"▼ Add milestone details"}</div>
+          </div>
+          {milestoneReport.enabled && (
+            <div style={{padding:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={S.label}>Milestone Name</div>
+                <input style={S.input} value={milestoneReport.milestoneName} placeholder="e.g. Go-Live Sign-off, Phase 2 Kickoff..."
+                  onChange={e=>setMR("milestoneName",e.target.value)} />
+              </div>
+              <div>
+                <div style={S.label}>Invoice Amount (KES)</div>
+                <input style={S.input} type="number" value={milestoneReport.invoiceAmount} placeholder="0"
+                  onChange={e=>setMR("invoiceAmount",e.target.value)} />
+              </div>
+              <div>
+                <div style={S.label}>Invoice Due Date</div>
+                <input style={S.input} type="date" value={milestoneReport.invoiceDueDate}
+                  onChange={e=>setMR("invoiceDueDate",e.target.value)} />
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={S.label}>Notes / Conditions for Invoice</div>
+                <input style={S.input} value={milestoneReport.invoiceNotes} placeholder="e.g. Invoice after client sign-off received..."
+                  onChange={e=>setMR("invoiceNotes",e.target.value)} />
+              </div>
+              {selProj && selProj.milestones?.length > 0 && (
+                <div style={{gridColumn:"1/-1"}}>
+                  <div style={S.label}>Or link to existing project milestone</div>
+                  <select style={S.select} onChange={e=>{
+                    const m=selProj.milestones.find(x=>x.id===e.target.value);
+                    if(m){setMR("milestoneName",m.name);setMR("invoiceAmount",m.amount);setMR("invoiceDueDate",m.dueDate);}
+                  }}>
+                    <option value="">Pick from project milestones...</option>
+                    {selProj.milestones.filter(m=>!m.invoiced).map(m=>(
+                      <option key={m.id} value={m.id}>{m.name} — KES {(m.amount||0).toLocaleString()} (due {m.dueDate})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:20}}>
           <button style={S.btn("ghost")} onClick={onClose}>Cancel</button>
-          <button style={S.btn("primary")} onClick={()=>{if(!f.projectId||!f.techId)return alert("Select project & technician");onSave({...f,tasks:f.tasks.filter(t=>t.trim())});}}>Add Allocation</button>
+          <button style={S.btn("primary")} onClick={()=>{
+            if(!f.projectId||!f.techId)return alert("Select project & technician");
+            const alloc = {...f, tasks:f.tasks.filter(t=>t.trim()),
+              milestoneReport: milestoneReport.enabled && milestoneReport.milestoneName ? milestoneReport : null};
+            onSave(alloc);
+          }}>Add Allocation</button>
         </div>
       </div>
     </div>
@@ -1258,6 +1457,229 @@ function exportWeeklyCSV(projects, techs, allocations, weeklyData, week) {
   const a = document.createElement("a"); a.href=url; a.download=`Weekly_Report_${week}.csv`; a.click();
 }
 
+
+/* ─── PROJECT STATUS REPORT ─────────────────────────────────────── */
+function ProjectStatusReport({projects, techs, allocations, weeklyData}) {
+  const [selProj, setSelProj] = useState("");
+  const [week, setWeek] = useState("2026-W19");
+
+  const proj = projects.find(p=>p.id===selProj);
+  const projAllocs = allocations.filter(a=>a.projectId===selProj);
+  const midData = weeklyData[`${week}_midweek`]||{};
+  const endData = weeklyData[`${week}_endweek`]||{};
+
+  const today = new Date();
+  const daysLeft = proj ? Math.ceil((new Date(proj.contractEnd)-today)/86400000) : null;
+  const totalPaid = proj ? (proj.milestones||[]).filter(m=>m.paid).reduce((s,m)=>s+m.amount,0) : 0;
+  const pctPaid = proj ? Math.round(totalPaid/(proj.contractValue||1)*100) : 0;
+  const pendingInvoices = proj ? (proj.milestones||[]).filter(m=>!m.invoiced) : [];
+
+  // Milestone reports from allocations
+  const milestoneReports = projAllocs.filter(a=>a.milestoneReport);
+
+  // Task progress across all allocations this week
+  const allTasks = projAllocs.flatMap(a=>{
+    const tasks=a.tasks?.length?a.tasks:[a.deliverable];
+    return tasks.map((task,ti)=>{
+      const tech=techs.find(t=>t.id===a.techId);
+      const midEntry=midData[`${a.id}_${ti}`]||{};
+      const endEntry=endData[`${a.id}_${ti}`]||{};
+      return {task,tech,deliverable:a.deliverable,allocId:a.id,ti,
+        midStatus:midEntry.status||"",midNote:midEntry.note||"",
+        endStatus:endEntry.status||"",endNote:endEntry.note||""};
+    });
+  });
+
+  const doneTasks = allTasks.filter(t=>t.endStatus==="✅ Done").length;
+  const totalTasks = allTasks.length;
+  const pctComplete = totalTasks ? Math.round(doneTasks/totalTasks*100) : 0;
+
+  const statusColor = pctComplete===100?"#10B981":pctComplete>=50?"#F59E0B":"#DC2626";
+
+  return (
+    <div>
+      {/* Project selector */}
+      <div style={{...S.card,marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{flex:1,minWidth:200}}>
+          <div style={S.label}>Select Project</div>
+          <select style={S.select} value={selProj} onChange={e=>setSelProj(e.target.value)}>
+            <option value="">Choose a project...</option>
+            {projects.map(p=><option key={p.id} value={p.id}>{p.name} — {p.status}</option>)}
+          </select>
+        </div>
+        <div style={{minWidth:160}}>
+          <div style={S.label}>Week</div>
+          <input style={S.input} type="week" value={week} onChange={e=>setWeek(e.target.value)} />
+        </div>
+      </div>
+
+      {!proj && (
+        <div style={{...S.card,textAlign:"center",padding:60,color:"#4A6480"}}>
+          <div style={{fontSize:32,marginBottom:12}}>📊</div>
+          Select a project above to view its full status report
+        </div>
+      )}
+
+      {proj && (
+        <div>
+          {/* ── Header ── */}
+          <div style={{...S.card,marginBottom:12,borderLeft:`4px solid ${statusColor}`}}>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+              <div>
+                <div style={{fontSize:20,fontWeight:700,color:"#E8EDF2",marginBottom:4}}>{proj.name}</div>
+                <div style={{fontSize:13,color:"#6B8099",marginBottom:8}}>{proj.client} · {proj.mode} · {proj.phase}</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <span style={S.badge(statusColor==="DC2626"?"#2D0F0F":statusColor==="F59E0B"?"#451A03":"#052E16",
+                    statusColor==="#DC2626"?"#FCA5A5":statusColor==="#F59E0B"?"#FCD34D":"#6EE7B7")}>
+                    {pctComplete}% Complete this week
+                  </span>
+                  {daysLeft!==null && daysLeft>=0 && (
+                    <span style={S.badge(daysLeft<=7?"#7F1D1D":daysLeft<=30?"#451A03":"#1E2A36",
+                      daysLeft<=7?"#FCA5A5":daysLeft<=30?"#FCD34D":"#6B8099")}>
+                      {daysLeft} days to contract end
+                    </span>
+                  )}
+                  {pendingInvoices.length>0 && (
+                    <span style={S.badge("#1E1A5F","#A5B4FC")}>{pendingInvoices.length} pending invoice{pendingInvoices.length>1?"s":""}</span>
+                  )}
+                </div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontSize:11,color:"#6B8099"}}>Contract Value</div>
+                <div style={{fontSize:18,fontWeight:700,color:"#E8EDF2"}}>KES {(proj.contractValue||0).toLocaleString()}</div>
+                <div style={{fontSize:11,color:"#10B981"}}>{pctPaid}% collected</div>
+              </div>
+            </div>
+            <div style={{marginTop:12,height:6,background:"#1E2A36",borderRadius:3}}>
+              <div style={{height:"100%",width:`${pctComplete}%`,background:statusColor,borderRadius:3,transition:"width 0.3s"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#4A6480",marginTop:4}}>
+              <span>{doneTasks}/{totalTasks} tasks done this week</span>
+              <span>{proj.contractStart} → {proj.contractEnd}</span>
+            </div>
+          </div>
+
+          {/* ── Allocated Team ── */}
+          <div style={{...S.card,marginBottom:12}}>
+            <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>
+              👥 Allocated Team — {week}
+            </div>
+            {projAllocs.length===0 && <div style={{color:"#4A6480",fontSize:13}}>No allocations for this week.</div>}
+            {projAllocs.map(a=>{
+              const tech=techs.find(t=>t.id===a.techId);
+              const rc=tech?roleColor(tech.role):{bg:"#333",fg:"#999"};
+              const tasks=a.tasks?.length?a.tasks:[a.deliverable];
+              const tasksDone=tasks.filter((_,ti)=>endData[`${a.id}_${ti}`]?.status==="✅ Done").length;
+              const pct=tasks.length?Math.round(tasksDone/tasks.length*100):0;
+              return (
+                <div key={a.id} style={{padding:"12px",background:"#0F1923",borderRadius:8,marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                    <div style={{width:36,height:36,borderRadius:"50%",background:rc.bg,color:rc.fg,
+                      display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13}}>
+                      {tech?tech.first[0]+tech.last[0]:"?"}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:600,color:"#C8D8E8"}}>{tech?`${tech.first} ${tech.last}`:"Unknown"}</div>
+                      <div style={{fontSize:11,color:"#4A6480"}}>{tech?.role} · {a.deliverable} · {a.mode}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:14,fontWeight:700,color:pct===100?"#10B981":pct>=50?"#F59E0B":"#DC2626"}}>{pct}%</div>
+                      <div style={{fontSize:11,color:"#4A6480"}}>{tasksDone}/{tasks.length} tasks</div>
+                    </div>
+                  </div>
+                  {/* Task breakdown */}
+                  {tasks.map((task,ti)=>{
+                    const endEntry=endData[`${a.id}_${ti}`]||{};
+                    const midEntry=midData[`${a.id}_${ti}`]||{};
+                    const st=endEntry.status||"";
+                    return (
+                      <div key={ti} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"4px 0",
+                        borderTop:"0.5px solid #1E2A36",fontSize:12}}>
+                        <span style={{fontSize:14,marginTop:1}}>{st==="✅ Done"?"✅":st==="❌ Not Done"?"❌":"⬜"}</span>
+                        <div style={{flex:1}}>
+                          <div style={{color:st==="✅ Done"?"#6EE7B7":st==="❌ Not Done"?"#FCA5A5":"#C8D8E8"}}>{ti+1}. {task}</div>
+                          {(endEntry.note||midEntry.note) && (
+                            <div style={{fontSize:11,color:"#4A6480",marginTop:2}}>
+                              {endEntry.note||midEntry.note}
+                            </div>
+                          )}
+                          <div style={{fontSize:10,color:"#3D5266",marginTop:1}}>
+                            Mid: {midEntry.status||"—"} · End: {st||"—"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {a.milestoneReport && (
+                    <div style={{marginTop:8,padding:"8px 10px",background:"#1A2535",borderRadius:6,borderLeft:"3px solid #F59E0B"}}>
+                      <div style={{fontSize:11,fontWeight:600,color:"#FCD34D",marginBottom:2}}>📋 Milestone: {a.milestoneReport.milestoneName}</div>
+                      <div style={{fontSize:11,color:"#6B8099"}}>
+                        Invoice: KES {(+a.milestoneReport.invoiceAmount||0).toLocaleString()} · Due: {a.milestoneReport.invoiceDueDate||"TBD"}
+                      </div>
+                      {a.milestoneReport.invoiceNotes && <div style={{fontSize:11,color:"#4A6480",marginTop:2}}>{a.milestoneReport.invoiceNotes}</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Financial Milestones ── */}
+          {(proj.milestones||[]).length>0 && (
+            <div style={{...S.card,marginBottom:12}}>
+              <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>💰 Financial Milestones</div>
+              {proj.milestones.map((m,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",
+                  borderBottom:"0.5px solid #1A2535",fontSize:13}}>
+                  <span style={{fontSize:16}}>{m.paid?"✅":m.invoiced?"📤":"⏳"}</span>
+                  <div style={{flex:1}}>
+                    <div style={{color:"#C8D8E8",fontWeight:500}}>{m.name}</div>
+                    <div style={{fontSize:11,color:"#4A6480"}}>Due: {m.dueDate||"TBD"}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontWeight:600,color:m.paid?"#10B981":m.invoiced?"#F59E0B":"#6B8099"}}>
+                      KES {(m.amount||0).toLocaleString()}
+                    </div>
+                    <div style={{fontSize:10,color:m.paid?"#10B981":m.invoiced?"#F59E0B":"#4A6480"}}>
+                      {m.paid?"Paid":m.invoiced?"Invoiced":"Pending"}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Upcoming Milestone Reports from Allocations ── */}
+          {milestoneReports.length>0 && (
+            <div style={{...S.card,marginBottom:12}}>
+              <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>📋 Upcoming Milestone Reports</div>
+              {milestoneReports.map((a,i)=>{
+                const tech=techs.find(t=>t.id===a.techId);
+                const mr=a.milestoneReport;
+                const ddays=mr.invoiceDueDate?Math.ceil((new Date(mr.invoiceDueDate)-new Date())/86400000):null;
+                return (
+                  <div key={i} style={{padding:"10px 12px",background:"#0F1923",borderRadius:8,
+                    marginBottom:8,borderLeft:`3px solid ${ddays!==null&&ddays<=7?"#DC2626":ddays<=14?"#F59E0B":"#3B82F6"}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                      <div style={{fontWeight:600,color:"#FCD34D"}}>{mr.milestoneName}</div>
+                      <div style={{fontWeight:700,color:"#10B981"}}>KES {(+mr.invoiceAmount||0).toLocaleString()}</div>
+                    </div>
+                    <div style={{fontSize:12,color:"#4A6480"}}>
+                      Officer: {tech?`${tech.first} ${tech.last}`:"—"} · Due: {mr.invoiceDueDate||"TBD"}
+                      {ddays!==null && <span style={{color:ddays<=7?"#FCA5A5":ddays<=14?"#FCD34D":"#6B8099",marginLeft:6}}>({ddays}d)</span>}
+                    </div>
+                    {mr.invoiceNotes && <div style={{fontSize:11,color:"#6B8099",marginTop:4}}>{mr.invoiceNotes}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── REPORTS ────────────────────────────────────────────────────────────── */
 function Reports({projects, techs, allocations, weeklyData, saveProjects, saveTechs, saveAllocs, saveWeekly}) {
   const [tab, setTab] = useState("tech");
@@ -1273,7 +1695,7 @@ function Reports({projects, techs, allocations, weeklyData, saveProjects, saveTe
         <div style={S.subhdr}>Query allocations, technician locations, and project summaries</div>
       </div>
       <div style={{display:"flex",gap:8,marginBottom:20}}>
-        {[["tech","Technician Lookup"],["proj","Project Status"],["finance","Finance Report"],["export","Import / Export"]].map(([id,lbl])=>(
+        {[["tech","Technician Lookup"],["proj-status","Project Status Report"],["proj","All Projects"],["finance","Finance Report"],["export","Import / Export"]].map(([id,lbl])=>(
           <button key={id} style={{...S.btn(tab===id?"primary":"ghost"),padding:"8px 16px"}} onClick={()=>setTab(id)}>{lbl}</button>
         ))}
       </div>
@@ -1324,6 +1746,10 @@ function Reports({projects, techs, allocations, weeklyData, saveProjects, saveTe
           })}
           {techQuery && foundTechs.length===0 && <div style={{...S.card,textAlign:"center",padding:30,color:"#4A6480"}}>No technicians found.</div>}
         </div>
+      )}
+
+      {tab==="proj-status" && (
+        <ProjectStatusReport projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} />
       )}
 
       {tab==="proj" && (
