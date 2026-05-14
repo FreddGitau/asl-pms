@@ -412,9 +412,9 @@ const TABLE_MAP = {
   },
   pms_weekly: {
     table: "weekly_data",
-    // weekly_data stored as single row per week_key with jsonb data blob
     toRow: null, fromRow: null,
   },
+  pms_deliverables: null, // stored as JSON blob in weekly_data table with key "deliverables_list"
 };
 
 // ── Supabase-powered storage hook ───────────────────────────────────────────
@@ -429,7 +429,15 @@ function useStorage(key, init) {
     (async () => {
       try {
         const map = TABLE_MAP[key];
-        if (!map) { setLoaded(true); return; }
+        if (!map) {
+          // For unmapped keys, try localStorage
+          try {
+            const saved = localStorage.getItem(key);
+            if (saved) setData(JSON.parse(saved));
+          } catch(_) {}
+          setLoaded(true);
+          return;
+        }
 
         if (key === "pms_weekly") {
           const rows = await supa("weekly_data?select=week_key,data");
@@ -460,7 +468,10 @@ function useStorage(key, init) {
 
     try {
       const map = TABLE_MAP[key];
-      if (!map) return;
+      if (!map) {
+        try { localStorage.setItem(key, JSON.stringify(newVal)); } catch(_) {}
+        return;
+      }
 
       if (key === "pms_weekly") {
         // Upsert each changed week entry
@@ -543,6 +554,7 @@ function AppInner() {
   const [techs, saveTechs, techsLoaded] = useStorage("pms_techs", SEED_TECHS);
   const [projects, saveProjects, projLoaded] = useStorage("pms_projects", SEED_PROJECTS);
   const [allocations, saveAllocs] = useStorage("pms_allocs", SEED_ALLOCATIONS);
+  const [deliverables, saveDeliverables] = useStorage("pms_deliverables", SEED_DELIVERABLES);
   const [weeklyData, saveWeekly, weeklyLoaded] = useStorage("pms_weekly", {});
 
   // Seed midweek data from actual review results (runs once when allocations load)
@@ -684,9 +696,9 @@ function AppInner() {
         {page==="dashboard" && <Dashboard projects={projects} techs={techs} allocations={allocations} alerts={alerts} setPage={setPage} />}
         {page==="projects" && <Projects projects={projects} saveProjects={saveProjects} />}
         {page==="techs" && <TechsPage techs={techs} saveTechs={saveTechs} allocations={allocations} />}
-        {page==="allocations" && <Allocations allocations={allocations} saveAllocs={saveAllocs} projects={projects} techs={techs} />}
+        {page==="allocations" && <Allocations allocations={allocations} saveAllocs={saveAllocs} projects={projects} techs={techs} deliverables={deliverables} saveDeliverables={saveDeliverables} />}
         {page==="weekly" && <WeeklyTracker projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveWeekly={saveWeekly} />}
-        {page==="reports" && <Reports projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveProjects={saveProjects} saveTechs={saveTechs} saveAllocs={saveAllocs} saveWeekly={saveWeekly} />}
+        {page==="reports" && <Reports projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveProjects={saveProjects} saveTechs={saveTechs} saveAllocs={saveAllocs} saveWeekly={saveWeekly} deliverables={deliverables} />}
         {page==="alerts" && <AlertsPage alerts={alerts} projects={projects} setPage={setPage} />}
       </div>
       {showChangePin && <ChangePinModal onClose={()=>setShowChangePin(false)} />}
@@ -1195,8 +1207,9 @@ function TechModal({tech, onSave, onClose}) {
 }
 
 /* ─── ALLOCATIONS ────────────────────────────────────────────────────────── */
-function Allocations({allocations, saveAllocs, projects, techs}) {
+function Allocations({allocations, saveAllocs, projects, techs, deliverables, saveDeliverables}) {
   const [modal, setModal] = useState(false);
+  const [delivModal, setDelivModal] = useState(false);
   const [filterProj, setFilterProj] = useState("");
   const [filterTech, setFilterTech] = useState("");
 
@@ -1209,9 +1222,12 @@ function Allocations({allocations, saveAllocs, projects, techs}) {
 
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:10}}>
         <div><div style={S.hdr}>Allocations</div><div style={S.subhdr}>{allocations.length} total allocations</div></div>
-        <button style={S.btn("primary")} onClick={()=>setModal(true)}>+ New Allocation</button>
+        <div style={{display:"flex",gap:8}}>
+          <button style={{...S.btn("ghost"),fontSize:12}} onClick={()=>setDelivModal(true)}>⚙ Manage Deliverables ({(deliverables||[]).length})</button>
+          <button style={S.btn("primary")} onClick={()=>setModal(true)}>+ New Allocation</button>
+        </div>
       </div>
 
       <div style={{...S.card,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -1273,12 +1289,78 @@ function Allocations({allocations, saveAllocs, projects, techs}) {
         )}
       </div>
 
-      {modal && <AllocationModal projects={projects} techs={techs} onSave={(a)=>{saveAllocs([...allocations,{...a,id:uid()}]);setModal(false);}} onClose={()=>setModal(false)} />}
+      {modal && <AllocationModal projects={projects} techs={techs} deliverables={deliverables||SEED_DELIVERABLES}
+        onSave={(a)=>{saveAllocs([...allocations,{...a,id:uid()}]);setModal(false);}} onClose={()=>setModal(false)} />}
+      {delivModal && <DeliverableManagerModal deliverables={deliverables||SEED_DELIVERABLES}
+        onSave={(d)=>{saveDeliverables(d);setDelivModal(false);}} onClose={()=>setDelivModal(false)} />}
     </div>
   );
 }
 
-function AllocationModal({projects, techs, onSave, onClose}) {
+
+/* ─── DELIVERABLE MANAGER MODAL ─────────────────────────────────── */
+function DeliverableManagerModal({deliverables, onSave, onClose}) {
+  const [list, setList] = useState([...deliverables]);
+  const [newItem, setNewItem] = useState("");
+  const add = () => {
+    if (!newItem.trim()) return;
+    if (list.includes(newItem.trim())) { alert("Already exists"); return; }
+    setList([...list, newItem.trim()]);
+    setNewItem("");
+  };
+  const del = (d) => { if(confirm(`Remove "${d}"?`)) setList(list.filter(x=>x!==d)); };
+  const move = (i, dir) => {
+    const arr = [...list];
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    setList(arr);
+  };
+  return (
+    <div style={S.modal} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{...S.modalBox, width:"min(560px,95vw)"}}>
+        <div style={{fontWeight:700,fontSize:16,color:"#E8EDF2",marginBottom:4}}>Manage Deliverables</div>
+        <div style={{fontSize:12,color:"#4A6480",marginBottom:16}}>
+          Add, remove or reorder deliverables. Changes apply to all new allocations.
+        </div>
+
+        {/* Add new */}
+        <div style={{display:"flex",gap:8,marginBottom:16}}>
+          <input style={{...S.input,flex:1}} value={newItem}
+            placeholder="Type new deliverable name..."
+            onChange={e=>setNewItem(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&add()} />
+          <button style={S.btn("primary")} onClick={add}>+ Add</button>
+        </div>
+
+        {/* List */}
+        <div style={{maxHeight:360,overflowY:"auto"}}>
+          {list.map((d,i)=>(
+            <div key={d} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",
+              borderBottom:"0.5px solid #1E2A36",fontSize:13}}>
+              <div style={{display:"flex",flexDirection:"column",gap:1}}>
+                <button style={{...S.btn("ghost"),padding:"1px 5px",fontSize:10,lineHeight:1}} onClick={()=>move(i,-1)}>▲</button>
+                <button style={{...S.btn("ghost"),padding:"1px 5px",fontSize:10,lineHeight:1}} onClick={()=>move(i,1)}>▼</button>
+              </div>
+              <span style={{flex:1,color:"#C8D8E8"}}>{i+1}. {d}</span>
+              <button style={{...S.btn("danger"),padding:"3px 8px",fontSize:11}} onClick={()=>del(d)}>Remove</button>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"flex",gap:8,justifyContent:"space-between",marginTop:16}}>
+          <div style={{fontSize:12,color:"#4A6480"}}>{list.length} deliverables total</div>
+          <div style={{display:"flex",gap:8}}>
+            <button style={S.btn("ghost")} onClick={onClose}>Cancel</button>
+            <button style={S.btn("primary")} onClick={()=>onSave(list)}>Save Changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AllocationModal({projects, techs, onSave, onClose, deliverables}) {
   const [f, setF] = useState({projectId:"",techId:"",deliverable:"",tasks:[""],mode:"Onsite",dateFrom:"",dateTo:"",notes:""});
   const [milestoneReport, setMilestoneReport] = useState({enabled:false,milestoneName:"",invoiceAmount:"",invoiceDueDate:"",invoiceNotes:""});
   const set = (k,v) => setF(p=>({...p,[k]:v}));
@@ -1310,7 +1392,7 @@ function AllocationModal({projects, techs, onSave, onClose}) {
           <div><div style={S.label}>Deliverable</div>
             <select style={S.select} value={f.deliverable} onChange={e=>set("deliverable",e.target.value)}>
               <option value="">Select deliverable...</option>
-              {SEED_DELIVERABLES.map(d=><option key={d}>{d}</option>)}
+              {(deliverables||SEED_DELIVERABLES).map(d=><option key={d}>{d}</option>)}
             </select>
           </div>
           <div><div style={S.label}>Mode</div>
@@ -1416,14 +1498,16 @@ function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly}) {
 
   const grouped = useMemo(() => {
     const g = {};
-    allocations.forEach(a => {
+    const allocs = allocations.length > 0 ? allocations : SEED_ALLOCATIONS;
+    allocs.forEach(a => {
       if (!g[a.projectId]) g[a.projectId] = [];
       g[a.projectId].push(a);
     });
     return g;
   }, [allocations]);
 
-  const totalTasks = allocations.reduce((s,a)=>s+(a.tasks?.length||1),0);
+  const activeAllocs = allocations.length > 0 ? allocations : SEED_ALLOCATIONS;
+  const totalTasks = activeAllocs.reduce((s,a)=>s+(a.tasks?.length||1),0);
   const doneTasks = Object.entries(data).filter(([k,v])=>!k.endsWith("_client")&&v?.status==="✅ Done").length;
 
   return (
@@ -1533,7 +1617,7 @@ function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly}) {
           </div>
         );
       })}
-      {allocations.length===0 && <div style={{...S.card,textAlign:"center",padding:40,color:"#4A6480"}}>No allocations yet. Add allocations first.</div>}
+      {Object.keys(grouped).length===0 && <div style={{...S.card,textAlign:"center",padding:40,color:"#4A6480"}}>No allocations found. Add allocations in the Allocations tab.</div>}
     </div>
   );
 }
@@ -1817,6 +1901,175 @@ function ProjectStatusReport({projects, techs, allocations, weeklyData}) {
   );
 }
 
+
+/* ─── UNALLOCATED TECHNICIANS REPORT ────────────────────────────── */
+function UnallocatedReport({techs, allocations}) {
+  const [week, setWeek] = useState("2026-W19");
+  const [roleFilter, setRoleFilter] = useState("All");
+
+  // Get date range for selected week
+  const getWeekDates = (weekStr) => {
+    const [year, w] = weekStr.split("-W").map(Number);
+    const jan4 = new Date(year, 0, 4);
+    const weekStart = new Date(jan4);
+    weekStart.setDate(jan4.getDate() - jan4.getDay() + 1 + (w-1)*7);
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6);
+    return {start:weekStart, end:weekEnd};
+  };
+
+  const {start, end} = getWeekDates(week);
+  const fmt2 = d => d.toLocaleDateString("en-KE",{day:"2-digit",month:"short"});
+
+  // Find allocated tech IDs for this week (based on allocation dates overlapping)
+  const allocatedIds = new Set(
+    allocations
+      .filter(a => {
+        if (!a.dateFrom && !a.dateTo) return true; // no dates = always allocated
+        const aStart = a.dateFrom ? new Date(a.dateFrom) : new Date(0);
+        const aEnd = a.dateTo ? new Date(a.dateTo) : new Date("2099-12-31");
+        return aStart <= end && aEnd >= start;
+      })
+      .map(a => a.techId)
+  );
+
+  const roles = ["All", ...new Set(techs.map(t=>t.role))];
+  const unallocated = techs.filter(t =>
+    !allocatedIds.has(t.id) &&
+    (roleFilter === "All" || t.role === roleFilter)
+  );
+  const allocated = techs.filter(t => allocatedIds.has(t.id));
+
+  return (
+    <div>
+      <div style={{...S.card, marginBottom:16}}>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div>
+            <div style={S.label}>Week</div>
+            <input style={{...S.input,width:160}} type="week" value={week}
+              onChange={e=>setWeek(e.target.value)} />
+          </div>
+          <div>
+            <div style={S.label}>Filter by Role</div>
+            <select style={{...S.select,width:200}} value={roleFilter}
+              onChange={e=>setRoleFilter(e.target.value)}>
+              {roles.map(r=><option key={r}>{r}</option>)}
+            </select>
+          </div>
+          <div style={{fontSize:12,color:"#6B8099",paddingBottom:8}}>
+            Week of {fmt2(start)} – {fmt2(end)}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary chips */}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{...S.cardSm,flex:1,minWidth:130,borderLeft:"3px solid #DC2626"}}>
+          <div style={{fontSize:11,color:"#6B8099",fontWeight:600,textTransform:"uppercase"}}>Not Allocated</div>
+          <div style={{fontSize:28,fontWeight:700,color:"#FCA5A5"}}>{unallocated.length}</div>
+          <div style={{fontSize:11,color:"#4A6480"}}>of {techs.length} total</div>
+        </div>
+        <div style={{...S.cardSm,flex:1,minWidth:130,borderLeft:"3px solid #10B981"}}>
+          <div style={{fontSize:11,color:"#6B8099",fontWeight:600,textTransform:"uppercase"}}>Allocated</div>
+          <div style={{fontSize:28,fontWeight:700,color:"#6EE7B7"}}>{allocated.length}</div>
+          <div style={{fontSize:11,color:"#4A6480"}}>{Math.round(allocated.length/techs.length*100)}% utilisation</div>
+        </div>
+        {roles.filter(r=>r!=="All").map(role => {
+          const roleTotal = techs.filter(t=>t.role===role).length;
+          const roleUnalloc = techs.filter(t=>t.role===role&&!allocatedIds.has(t.id)).length;
+          const rc = roleColor(role);
+          return (
+            <div key={role} style={{...S.cardSm,flex:1,minWidth:130}}>
+              <div style={{fontSize:10,color:rc.fg,fontWeight:600,textTransform:"uppercase",
+                background:rc.bg,padding:"2px 6px",borderRadius:10,display:"inline-block",marginBottom:4}}>
+                {role.split(" ")[0]}
+              </div>
+              <div style={{fontSize:18,fontWeight:700,color:"#E8EDF2"}}>{roleUnalloc}/{roleTotal}</div>
+              <div style={{fontSize:10,color:"#4A6480"}}>unallocated</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Unallocated list */}
+      <div style={S.card}>
+        <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>
+          ⚠ Unallocated Technicians — {fmt2(start)} to {fmt2(end)}
+          {unallocated.length===0 && <span style={{color:"#10B981",marginLeft:8,fontSize:12}}>✅ All staff are allocated this week!</span>}
+        </div>
+        {unallocated.length===0 ? (
+          <div style={{textAlign:"center",padding:30,color:"#10B981",fontSize:14}}>
+            🎉 Every technician has been allocated for this week.
+          </div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
+            {unallocated.map(t => {
+              const rc = roleColor(t.role);
+              return (
+                <div key={t.id} style={{...S.cardSm,display:"flex",gap:10,alignItems:"center",
+                  borderLeft:"3px solid #DC2626"}}>
+                  <div style={{width:38,height:38,borderRadius:"50%",background:rc.bg,color:rc.fg,
+                    display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,
+                    fontSize:13,flexShrink:0}}>
+                    {t.first[0]}{t.last[0]}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,color:"#E8EDF2",fontSize:13}}>{t.first} {t.last}</div>
+                    <div style={{fontSize:10,color:"#4A6480"}}>{t.id}</div>
+                    <span style={{...S.badge(rc.bg,rc.fg),fontSize:10}}>{t.role}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Allocated list for reference */}
+      <div style={{...S.card,marginTop:12}}>
+        <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>
+          ✅ Allocated This Week ({allocated.length})
+        </div>
+        <table style={S.table}>
+          <thead><tr>
+            {["Technician","Role","Project","Deliverable","Mode","Dates"].map(h=>(
+              <th key={h} style={S.th}>{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {allocated.map(t => {
+              const myAllocs = allocations.filter(a => a.techId===t.id);
+              const rc = roleColor(t.role);
+              return myAllocs.map((a,ai) => {
+                const proj = /* projects not in scope here - show projectId */null;
+                return (
+                  <tr key={`${t.id}-${ai}`}>
+                    {ai===0 && <td style={{...S.td,fontWeight:600}} rowSpan={myAllocs.length}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{width:24,height:24,borderRadius:"50%",background:rc.bg,color:rc.fg,
+                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700}}>
+                          {t.first[0]}{t.last[0]}
+                        </div>
+                        {t.first} {t.last}
+                      </div>
+                    </td>}
+                    {ai===0 && <td style={S.td} rowSpan={myAllocs.length}>
+                      <span style={S.badge(rc.bg,rc.fg)}>{t.role.split(" ")[0]}</span>
+                    </td>}
+                    <td style={{...S.td,fontSize:12,color:"#60A5FA"}}>{a.projectId}</td>
+                    <td style={{...S.td,fontSize:11}}>{a.deliverable}</td>
+                    <td style={S.td}>{a.mode}</td>
+                    <td style={{...S.td,fontSize:11,color:"#4A6480",whiteSpace:"nowrap"}}>{a.dateFrom||"—"} → {a.dateTo||"—"}</td>
+                  </tr>
+                );
+              });
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 /* ─── REPORTS ────────────────────────────────────────────────────────────── */
 function Reports({projects, techs, allocations, weeklyData, saveProjects, saveTechs, saveAllocs, saveWeekly}) {
   const [tab, setTab] = useState("tech");
@@ -1832,7 +2085,7 @@ function Reports({projects, techs, allocations, weeklyData, saveProjects, saveTe
         <div style={S.subhdr}>Query allocations, technician locations, and project summaries</div>
       </div>
       <div style={{display:"flex",gap:8,marginBottom:20}}>
-        {[["tech","Technician Lookup"],["proj-status","Project Status Report"],["proj","All Projects"],["finance","Finance Report"],["export","Import / Export"]].map(([id,lbl])=>(
+        {[["tech","Technician Lookup"],["unallocated","Unallocated Staff"],["proj-status","Project Status Report"],["proj","All Projects"],["finance","Finance Report"],["export","Import / Export"]].map(([id,lbl])=>(
           <button key={id} style={{...S.btn(tab===id?"primary":"ghost"),padding:"8px 16px"}} onClick={()=>setTab(id)}>{lbl}</button>
         ))}
       </div>
@@ -1883,6 +2136,10 @@ function Reports({projects, techs, allocations, weeklyData, saveProjects, saveTe
           })}
           {techQuery && foundTechs.length===0 && <div style={{...S.card,textAlign:"center",padding:30,color:"#4A6480"}}>No technicians found.</div>}
         </div>
+      )}
+
+      {tab==="unallocated" && (
+        <UnallocatedReport techs={techs} allocations={allocations} />
       )}
 
       {tab==="proj-status" && (
