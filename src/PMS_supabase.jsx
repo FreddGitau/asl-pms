@@ -565,10 +565,29 @@ function AppInner() {
     // Only seed if no data exists yet for this week
     const existing = weeklyData[KEY];
     const existingEnd = weeklyData[`${WEEK}_endweek`];
+    // If we have real allocations from DB, check if weekly data keys match
+    // If they don't match (stale seed IDs), re-seed with correct IDs
     if (existing && Object.keys(existing).length > 0 &&
-        existingEnd && Object.keys(existingEnd).length > 0) return;
-    // Use actual allocations OR seed allocations to build weekly data
+        existingEnd && Object.keys(existingEnd).length > 0) {
+      // Verify keys match current allocation IDs
+      const currentIds = new Set((allocations.length > 0 ? allocations : SEED_ALLOCATIONS).map(a=>a.id));
+      const existingKeys = Object.keys(existing).filter(k=>!k.endsWith("_client"));
+      const keysMatch = existingKeys.some(k => {
+        const allocId = k.split("_").slice(0,-1).join("_");
+        return currentIds.has(allocId);
+      });
+      if (keysMatch) return; // existing data matches current IDs, skip re-seed
+      // else fall through to re-seed with correct IDs
+    }
+    // Use actual allocations if they exist in DB, otherwise use seed
+    // This ensures weekly data keys match the actual allocation IDs
     const allocsToUse = allocations.length > 0 ? allocations : SEED_ALLOCATIONS;
+    // Build a lookup: projectName -> alloc for matching seed data to real allocs
+    const projNameToAlloc = {};
+    allocsToUse.forEach(a => {
+      const proj = [...projects, ...SEED_PROJECTS].find(p => p.id === a.projectId);
+      if (proj) projNameToAlloc[proj.name] = a;
+    });
 
     const seeded = {};
     const seededEnd = {};
@@ -578,29 +597,29 @@ function AppInner() {
       const midResults = MIDWEEK_REVIEW[projName];
       const endDoneIdx = END_WEEK_DATA[projName] || [];
       const tasks = a.tasks?.length ? a.tasks : [a.deliverable];
+      const allocId = a.id; // use real allocation ID so keys match
 
       // Midweek seed
       if (midResults) {
         tasks.forEach((_, ti) => {
           const st = midResults[ti];
-          if (!st) return;
           const noteKey = `${projName}_${ti}`;
-          seeded[`${a.id}_${ti}`] = {
+          seeded[`${allocId}_${ti}`] = {
             status: st === "done" ? "✅ Done" : "❌ Not Done",
             note: MIDWEEK_NOTES_SEED[noteKey] || ""
           };
         });
-        seeded[`${a.id}_client`] = "Available";
+        seeded[`${allocId}_client`] = "Available";
       }
 
-      // End-week seed
+      // End-week seed (always seed, even if no midweek data)
       tasks.forEach((_, ti) => {
-        seededEnd[`${a.id}_${ti}`] = {
+        seededEnd[`${allocId}_${ti}`] = {
           status: endDoneIdx.includes(ti) ? "✅ Done" : "❌ Not Done",
           note: ""
         };
       });
-      seededEnd[`${a.id}_client`] = "Available";
+      seededEnd[`${allocId}_client`] = "Available";
     });
 
     const newWeekly = { ...weeklyData };
@@ -697,7 +716,7 @@ function AppInner() {
         {page==="projects" && <Projects projects={projects} saveProjects={saveProjects} />}
         {page==="techs" && <TechsPage techs={techs} saveTechs={saveTechs} allocations={allocations} />}
         {page==="allocations" && <Allocations allocations={allocations} saveAllocs={saveAllocs} projects={projects} techs={techs} deliverables={deliverables} saveDeliverables={saveDeliverables} />}
-        {page==="weekly" && <WeeklyTracker projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveWeekly={saveWeekly} />}
+        {page==="weekly" && <WeeklyTracker projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveWeekly={saveWeekly} allSeedProjects={SEED_PROJECTS} />}
         {page==="reports" && <Reports projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveProjects={saveProjects} saveTechs={saveTechs} saveAllocs={saveAllocs} saveWeekly={saveWeekly} deliverables={deliverables} />}
         {page==="alerts" && <AlertsPage alerts={alerts} projects={projects} setPage={setPage} />}
       </div>
@@ -1476,7 +1495,7 @@ function AllocationModal({projects, techs, onSave, onClose, deliverables}) {
 }
 
 /* ─── WEEKLY TRACKER ─────────────────────────────────────────────────────── */
-function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly}) {
+function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly, allSeedProjects}) {
   const [week, setWeek] = useState("2026-W19");  // default to current review week
   const [checkpoint, setCheckpoint] = useState("midweek");
 
@@ -1508,7 +1527,13 @@ function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly}) {
 
   const activeAllocs = allocations.length > 0 ? allocations : SEED_ALLOCATIONS;
   const totalTasks = activeAllocs.reduce((s,a)=>s+(a.tasks?.length||1),0);
-  const doneTasks = Object.entries(data).filter(([k,v])=>!k.endsWith("_client")&&v?.status==="✅ Done").length;
+  // Only count done tasks for allocations that actually exist
+  const activeAllocIds = new Set(activeAllocs.map(a=>a.id));
+  const doneTasks = Object.entries(data).filter(([k,v])=>{
+    if(k.endsWith("_client")) return false;
+    const allocId = k.split("_").slice(0,-1).join("_"); // everything before last _N
+    return activeAllocIds.has(allocId) && v?.status==="✅ Done";
+  }).length;
 
   return (
     <div>
@@ -1523,6 +1548,15 @@ function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly}) {
           ))}
           <button style={S.btn("success")} onClick={()=>exportWeeklyCSV(projects,techs,allocations,weeklyData,week)}>⬇ CSV</button>
           <button style={{...S.btn("primary"),background:"#217346"}} onClick={()=>exportWeeklyXLSX(projects,techs,allocations,weeklyData,week)}>⬇ Excel (.xlsx)</button>
+          <button style={{...S.btn("danger"),fontSize:12,padding:"8px 12px"}} title="Clear and re-seed weekly data from report results"
+            onClick={()=>{
+              if(!confirm("Reset weekly data for this week and re-load from report results?")) return;
+              const cleared = {...weeklyData};
+              delete cleared[`${week}_midweek`];
+              delete cleared[`${week}_endweek`];
+              saveWeekly(cleared);
+              setTimeout(()=>window.location.reload(),300);
+            }}>↺ Reset Week</button>
         </div>
       </div>
 
@@ -1542,7 +1576,7 @@ function WeeklyTracker({projects, techs, allocations, weeklyData, saveWeekly}) {
       </div>
 
       {Object.entries(grouped).map(([projId, allocs]) => {
-        const proj = projects.find(p=>p.id===projId);
+        const proj = projects.find(p=>p.id===projId) || SEED_PROJECTS.find(p=>p.id===projId);
         const projDone = allocs.reduce((s,a)=>{
           const tasks = a.tasks?.length||1;
           let d=0;
