@@ -554,6 +554,7 @@ function AppInner() {
   const [techs, saveTechs, techsLoaded] = useStorage("pms_techs", SEED_TECHS);
   const [projects, saveProjects, projLoaded] = useStorage("pms_projects", SEED_PROJECTS);
   const [allocations, saveAllocs] = useStorage("pms_allocs", SEED_ALLOCATIONS);
+  const [planningData, savePlanningData] = useStorage("pms_planning", []);
   const [deliverables, saveDeliverables] = useStorage("pms_deliverables", SEED_DELIVERABLES);
   const [weeklyData, saveWeekly, weeklyLoaded] = useStorage("pms_weekly", {});
 
@@ -683,6 +684,8 @@ function AppInner() {
     {id:"techs",icon:"◉",label:"Technicians"},
     {id:"allocations",icon:"⊛",label:"Allocations"},
     {id:"weekly",icon:"☑",label:"Weekly Tracker"},
+    {id:"planning",icon:"◫",label:"Project Planning"},
+    {id:"gantt",icon:"▤",label:"Gantt Chart"},
     {id:"reports",icon:"◧",label:"Reports"},
     {id:"alerts",icon:"⚠",label:`Alerts ${alerts.length>0?`(${alerts.length})`:""}`,badge:alerts.filter(a=>a.level==="danger").length},
   ];
@@ -717,6 +720,8 @@ function AppInner() {
         {page==="techs" && <TechsPage techs={techs} saveTechs={saveTechs} allocations={allocations} />}
         {page==="allocations" && <Allocations allocations={allocations} saveAllocs={saveAllocs} projects={projects} techs={techs} deliverables={deliverables} saveDeliverables={saveDeliverables} />}
         {page==="weekly" && <WeeklyTracker projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveWeekly={saveWeekly} allSeedProjects={SEED_PROJECTS} />}
+        {page==="planning" && <ProjectPlanning projects={projects} saveProjects={saveProjects} techs={techs} allocations={allocations} />}
+        {page==="gantt" && <GanttView projects={projects} allocations={allocations} />}
         {page==="reports" && <Reports projects={projects} techs={techs} allocations={allocations} weeklyData={weeklyData} saveProjects={saveProjects} saveTechs={saveTechs} saveAllocs={saveAllocs} saveWeekly={saveWeekly} deliverables={deliverables} />}
         {page==="alerts" && <AlertsPage alerts={alerts} projects={projects} setPage={setPage} />}
       </div>
@@ -1228,6 +1233,7 @@ function TechModal({tech, onSave, onClose}) {
 /* ─── ALLOCATIONS ────────────────────────────────────────────────────────── */
 function Allocations({allocations, saveAllocs, projects, techs, deliverables, saveDeliverables}) {
   const [modal, setModal] = useState(false);
+  const [editAlloc, setEditAlloc] = useState(null);
   const [delivModal, setDelivModal] = useState(false);
   const [filterProj, setFilterProj] = useState("");
   const [filterTech, setFilterTech] = useState("");
@@ -1299,7 +1305,12 @@ function Allocations({allocations, saveAllocs, projects, techs, deliverables, sa
                     </td>
                     <td style={S.td}>{a.mode}</td>
                     <td style={{...S.td,fontSize:11,color:"#4A6480",whiteSpace:"nowrap"}}>{a.dateFrom} → {a.dateTo}</td>
-                    <td style={S.td}><button style={{...S.btn("danger"),padding:"4px 8px",fontSize:11}} onClick={()=>del(a.id)}>×</button></td>
+                    <td style={S.td}>
+                      <div style={{display:"flex",gap:4}}>
+                        <button style={{...S.btn(),padding:"4px 8px",fontSize:11}} onClick={()=>setEditAlloc(a)}>✏</button>
+                        <button style={{...S.btn("danger"),padding:"4px 8px",fontSize:11}} onClick={()=>del(a.id)}>×</button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -1310,6 +1321,10 @@ function Allocations({allocations, saveAllocs, projects, techs, deliverables, sa
 
       {modal && <AllocationModal projects={projects} techs={techs} deliverables={deliverables||SEED_DELIVERABLES}
         onSave={(a)=>{saveAllocs([...allocations,{...a,id:uid()}]);setModal(false);}} onClose={()=>setModal(false)} />}
+      {editAlloc && <EditAllocationModal alloc={editAlloc} projects={projects} techs={techs}
+        deliverables={deliverables||SEED_DELIVERABLES}
+        onSave={(updated)=>{saveAllocs(allocations.map(a=>a.id===updated.id?updated:a));setEditAlloc(null);}}
+        onClose={()=>setEditAlloc(null)} />}
       {delivModal && <DeliverableManagerModal deliverables={deliverables||SEED_DELIVERABLES}
         onSave={(d)=>{saveDeliverables(d);setDelivModal(false);}} onClose={()=>setDelivModal(false)} />}
     </div>
@@ -1373,6 +1388,124 @@ function DeliverableManagerModal({deliverables, onSave, onClose}) {
             <button style={S.btn("ghost")} onClick={onClose}>Cancel</button>
             <button style={S.btn("primary")} onClick={()=>onSave(list)}>Save Changes</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ─── EDIT ALLOCATION MODAL ─────────────────────────────────────── */
+function EditAllocationModal({alloc, projects, techs, deliverables, onSave, onClose}) {
+  const [f, setF] = useState({...alloc, tasks:[...(alloc.tasks||[])]});
+  const [milestoneReport, setMilestoneReport] = useState(alloc.milestoneReport||{enabled:false,milestoneName:"",invoiceAmount:"",invoiceDueDate:"",invoiceNotes:""});
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const setMR = (k,v) => setMilestoneReport(p=>({...p,[k]:v}));
+  const setTask = (i,v) => setF(p=>({...p,tasks:p.tasks.map((t,j)=>j===i?v:t)}));
+  const addTask = () => setF(p=>({...p,tasks:[...p.tasks,""]}));
+  const delTask = (i) => setF(p=>({...p,tasks:p.tasks.filter((_,j)=>j!==i)}));
+  const selProj = projects.find(p=>p.id===f.projectId);
+  return (
+    <div style={S.modal} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{...S.modalBox,width:"min(700px,95vw)"}}>
+        <div style={{fontWeight:700,fontSize:16,color:"#E8EDF2",marginBottom:4}}>Edit Allocation</div>
+        <div style={{fontSize:11,color:"#4A6480",marginBottom:16}}>ID: {alloc.id}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={S.label}>Project</div>
+            <select style={S.select} value={f.projectId} onChange={e=>set("projectId",e.target.value)}>
+              <option value="">Select project...</option>
+              {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            {selProj && <div style={{fontSize:11,color:"#4A6480",marginTop:4}}>
+              Phase: {selProj.phase} · {selProj.contractStart} → {selProj.contractEnd}
+            </div>}
+          </div>
+          <div>
+            <div style={S.label}>Technician</div>
+            <select style={S.select} value={f.techId} onChange={e=>set("techId",e.target.value)}>
+              <option value="">Select technician...</option>
+              {techs.map(t=><option key={t.id} value={t.id}>{t.first} {t.last} ({t.role.split(" ")[0]})</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={S.label}>Deliverable</div>
+            <select style={S.select} value={f.deliverable} onChange={e=>set("deliverable",e.target.value)}>
+              <option value="">Select deliverable...</option>
+              {(deliverables||SEED_DELIVERABLES).map(d=><option key={d}>{d}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={S.label}>Mode</div>
+            <select style={S.select} value={f.mode} onChange={e=>set("mode",e.target.value)}>
+              {["Onsite","Offsite","Remote","Hybrid"].map(m=><option key={m}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={S.label}>Date From</div>
+            <input style={S.input} type="date" value={f.dateFrom||""} onChange={e=>set("dateFrom",e.target.value)} />
+          </div>
+          <div>
+            <div style={S.label}>Date To</div>
+            <input style={S.input} type="date" value={f.dateTo||""} onChange={e=>set("dateTo",e.target.value)} />
+          </div>
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={S.label}>Tasks</div>
+            {f.tasks.map((t,i)=>(
+              <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
+                <input style={{...S.input,flex:1}} value={t} placeholder={`Task ${i+1}...`}
+                  onChange={e=>setTask(i,e.target.value)} />
+                {f.tasks.length>1 && <button style={{...S.btn("danger"),padding:"0 10px"}} onClick={()=>delTask(i)}>×</button>}
+              </div>
+            ))}
+            <button style={{...S.btn(),fontSize:12,padding:"6px 12px"}} onClick={addTask}>+ Add Task</button>
+          </div>
+          <div style={{gridColumn:"1/-1"}}>
+            <div style={S.label}>Notes</div>
+            <input style={S.input} value={f.notes||""} onChange={e=>set("notes",e.target.value)} />
+          </div>
+        </div>
+
+        {/* Milestone Report */}
+        <div style={{marginTop:12,border:"1px solid #263548",borderRadius:8,overflow:"hidden"}}>
+          <div style={{background:"#1E2A36",padding:"10px 14px",display:"flex",alignItems:"center",
+            justifyContent:"space-between",cursor:"pointer"}}
+            onClick={()=>setMR("enabled",!milestoneReport.enabled)}>
+            <div style={{fontSize:13,fontWeight:600,color:"#60A5FA"}}>📋 Milestone / Invoice Report</div>
+            <div style={{fontSize:12,color:"#6B8099"}}>{milestoneReport.enabled?"▲ Hide":"▼ Edit"}</div>
+          </div>
+          {milestoneReport.enabled && (
+            <div style={{padding:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={S.label}>Milestone Name</div>
+                <input style={S.input} value={milestoneReport.milestoneName||""}
+                  onChange={e=>setMR("milestoneName",e.target.value)} />
+              </div>
+              <div>
+                <div style={S.label}>Invoice Amount (KES)</div>
+                <input style={S.input} type="number" value={milestoneReport.invoiceAmount||""}
+                  onChange={e=>setMR("invoiceAmount",e.target.value)} />
+              </div>
+              <div>
+                <div style={S.label}>Invoice Due Date</div>
+                <input style={S.input} type="date" value={milestoneReport.invoiceDueDate||""}
+                  onChange={e=>setMR("invoiceDueDate",e.target.value)} />
+              </div>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={S.label}>Notes</div>
+                <input style={S.input} value={milestoneReport.invoiceNotes||""}
+                  onChange={e=>setMR("invoiceNotes",e.target.value)} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:20}}>
+          <button style={S.btn("ghost")} onClick={onClose}>Cancel</button>
+          <button style={S.btn("success")} onClick={()=>{
+            onSave({...f, tasks:f.tasks.filter(t=>t.trim()),
+              milestoneReport:milestoneReport.enabled&&milestoneReport.milestoneName?milestoneReport:null});
+          }}>Save Changes</button>
         </div>
       </div>
     </div>
@@ -2100,6 +2233,670 @@ function UnallocatedReport({techs, allocations}) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PROJECT PLANNING — Gap Analysis & New Project Setup
+   ═══════════════════════════════════════════════════════════════════ */
+const GAP_CATEGORIES = [
+  {id:"infra",label:"Infrastructure",icon:"🖥"},
+  {id:"process",label:"Process / Workflow",icon:"🔄"},
+  {id:"data",label:"Data & Migration",icon:"🗄"},
+  {id:"training",label:"Training & Capacity",icon:"📚"},
+  {id:"integration",label:"System Integration",icon:"🔗"},
+  {id:"compliance",label:"Compliance / Legal",icon:"⚖"},
+  {id:"resource",label:"Resource / Staffing",icon:"👥"},
+  {id:"financial",label:"Financial",icon:"💰"},
+];
+
+const PRIORITY_COLORS = {
+  High:   {bg:"#7F1D1D", fg:"#FCA5A5"},
+  Medium: {bg:"#451A03", fg:"#FCD34D"},
+  Low:    {bg:"#052E16", fg:"#6EE7B7"},
+};
+
+const PROJECT_PHASES = [
+  "Requirements Gathering","System Design","Development / Configuration",
+  "Data Migration","User Acceptance Testing","Training","Go-Live","Post Go-Live Support","Sign-off & Closure"
+];
+
+function ProjectPlanning({projects, saveProjects, techs, allocations}) {
+  const [tab, setTab] = useState("gap");
+  const [selProjId, setSelProjId] = useState("");
+  const [newPlan, setNewPlan] = useState({
+    name:"", client:"", contractValue:"", currency:"KES",
+    contractStart:"", contractEnd:"", mode:"Onsite",
+    objectives:"", scope:"", outOfScope:"",
+    phases: PROJECT_PHASES.map((p,i)=>({
+      id:`ph${i}`, name:p, startDate:"", endDate:"", status:"Pending",
+      deliverables:"", resources:"", notes:""
+    })),
+    gaps:[], risks:[], assumptions:[]
+  });
+  const [saving, setSaving] = useState(false);
+
+  const selProj = projects.find(p=>p.id===selProjId);
+  const setNP = (k,v) => setNewPlan(p=>({...p,[k]:v}));
+
+  // Gap analysis state for selected project
+  const [gaps, setGaps] = useState([]);
+  const [newGap, setNewGap] = useState({title:"",category:"process",priority:"High",currentState:"",desiredState:"",actionRequired:"",owner:"",targetDate:""});
+
+  useEffect(()=>{
+    if(selProj?.gaps) setGaps(selProj.gaps);
+    else setGaps([]);
+  },[selProjId]);
+
+  const addGap = () => {
+    if(!newGap.title.trim()) return;
+    const updated = [...gaps, {...newGap, id:uid()}];
+    setGaps(updated);
+    if(selProj){
+      saveProjects(projects.map(p=>p.id===selProjId?{...p,gaps:updated}:p));
+    }
+    setNewGap({title:"",category:"process",priority:"High",currentState:"",desiredState:"",actionRequired:"",owner:"",targetDate:""});
+  };
+
+  const delGap = (id) => {
+    const updated = gaps.filter(g=>g.id!==id);
+    setGaps(updated);
+    if(selProj) saveProjects(projects.map(p=>p.id===selProjId?{...p,gaps:updated}:p));
+  };
+
+  const saveNewProject = () => {
+    if(!newPlan.name.trim()||!newPlan.contractStart||!newPlan.contractEnd) {
+      alert("Please fill in project name and contract dates"); return;
+    }
+    setSaving(true);
+    const proj = {
+      id:"P"+uid(), name:newPlan.name, client:newPlan.client||newPlan.name,
+      status:"Active", mode:newPlan.mode,
+      contractStart:newPlan.contractStart, contractEnd:newPlan.contractEnd,
+      contractValue:+newPlan.contractValue||0, currency:newPlan.currency,
+      phase:newPlan.phases[0]?.name||"Requirements Gathering",
+      nextPhaseDate:newPlan.phases[0]?.endDate||"",
+      milestones:newPlan.phases.filter(ph=>ph.endDate).map((ph,i)=>({
+        id:uid(), name:ph.name, amount:Math.round((+newPlan.contractValue||0)/newPlan.phases.filter(p=>p.endDate).length),
+        dueDate:ph.endDate, invoiced:false, paid:false, documents:[]
+      })),
+      phases:newPlan.phases, gaps:newPlan.gaps,
+      objectives:newPlan.objectives, scope:newPlan.scope, outOfScope:newPlan.outOfScope,
+    };
+    saveProjects([...projects, proj]);
+    setTimeout(()=>{setSaving(false); alert(`Project "${proj.name}" created! View it in Projects tab.`);},500);
+  };
+
+  return (
+    <div>
+      <div style={{marginBottom:20}}>
+        <div style={S.hdr}>Project Planning</div>
+        <div style={S.subhdr}>Gap analysis, new project setup and phase planning</div>
+      </div>
+
+      <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+        {[["gap","📊 Gap Analysis"],["new","➕ Plan New Project"],["phases","🗂 Phase Planning"]].map(([id,lbl])=>(
+          <button key={id} style={{...S.btn(tab===id?"primary":"ghost"),padding:"9px 18px"}}
+            onClick={()=>setTab(id)}>{lbl}</button>
+        ))}
+      </div>
+
+      {/* ── GAP ANALYSIS TAB ── */}
+      {tab==="gap" && (
+        <div>
+          <div style={{...S.card,marginBottom:16}}>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+              <div style={{flex:1,minWidth:220}}>
+                <div style={S.label}>Select Project</div>
+                <select style={S.select} value={selProjId} onChange={e=>setSelProjId(e.target.value)}>
+                  <option value="">Choose project for gap analysis...</option>
+                  {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              {selProj && (
+                <div style={{fontSize:12,color:"#4A6480",paddingBottom:8}}>
+                  Phase: {selProj.phase} · {selProj.contractStart} → {selProj.contractEnd}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!selProjId && (
+            <div style={{...S.card,textAlign:"center",padding:50,color:"#4A6480"}}>
+              <div style={{fontSize:32,marginBottom:12}}>📊</div>
+              Select a project to view or add gap analysis
+            </div>
+          )}
+
+          {selProjId && (
+            <div>
+              {/* Summary by category */}
+              {gaps.length>0 && (
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:8,marginBottom:16}}>
+                  {GAP_CATEGORIES.filter(c=>gaps.some(g=>g.category===c.id)).map(c=>{
+                    const catGaps=gaps.filter(g=>g.category===c.id);
+                    const highCount=catGaps.filter(g=>g.priority==="High").length;
+                    return (
+                      <div key={c.id} style={{...S.cardSm,borderLeft:`3px solid ${highCount>0?"#DC2626":"#3B82F6"}`}}>
+                        <div style={{fontSize:16,marginBottom:4}}>{c.icon}</div>
+                        <div style={{fontSize:12,fontWeight:600,color:"#C8D8E8"}}>{c.label}</div>
+                        <div style={{fontSize:11,color:"#4A6480"}}>{catGaps.length} gap{catGaps.length!==1?"s":""}</div>
+                        {highCount>0 && <div style={{fontSize:10,color:"#FCA5A5"}}>{highCount} high priority</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Add new gap */}
+              <div style={{...S.card,marginBottom:12}}>
+                <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>➕ Add Gap</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:10}}>
+                  <div style={{gridColumn:"1/-1"}}>
+                    <div style={S.label}>Gap Title</div>
+                    <input style={S.input} value={newGap.title} placeholder="e.g. Missing HR module integration..."
+                      onChange={e=>setNewGap(g=>({...g,title:e.target.value}))} />
+                  </div>
+                  <div>
+                    <div style={S.label}>Category</div>
+                    <select style={S.select} value={newGap.category} onChange={e=>setNewGap(g=>({...g,category:e.target.value}))}>
+                      {GAP_CATEGORIES.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={S.label}>Priority</div>
+                    <select style={S.select} value={newGap.priority} onChange={e=>setNewGap(g=>({...g,priority:e.target.value}))}>
+                      {["High","Medium","Low"].map(p=><option key={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={S.label}>Owner</div>
+                    <select style={S.select} value={newGap.owner} onChange={e=>setNewGap(g=>({...g,owner:e.target.value}))}>
+                      <option value="">Assign owner...</option>
+                      {techs.map(t=><option key={t.id} value={`${t.first} ${t.last}`}>{t.first} {t.last}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={S.label}>Current State</div>
+                    <input style={S.input} value={newGap.currentState} placeholder="What exists now..."
+                      onChange={e=>setNewGap(g=>({...g,currentState:e.target.value}))} />
+                  </div>
+                  <div>
+                    <div style={S.label}>Desired State</div>
+                    <input style={S.input} value={newGap.desiredState} placeholder="What is needed..."
+                      onChange={e=>setNewGap(g=>({...g,desiredState:e.target.value}))} />
+                  </div>
+                  <div style={{gridColumn:"1/-1"}}>
+                    <div style={S.label}>Action Required</div>
+                    <input style={S.input} value={newGap.actionRequired} placeholder="Steps to close this gap..."
+                      onChange={e=>setNewGap(g=>({...g,actionRequired:e.target.value}))} />
+                  </div>
+                  <div>
+                    <div style={S.label}>Target Date</div>
+                    <input style={S.input} type="date" value={newGap.targetDate}
+                      onChange={e=>setNewGap(g=>({...g,targetDate:e.target.value}))} />
+                  </div>
+                </div>
+                <button style={S.btn("primary")} onClick={addGap}>Add Gap</button>
+              </div>
+
+              {/* Gaps list */}
+              {gaps.length===0 && (
+                <div style={{...S.card,textAlign:"center",padding:30,color:"#4A6480"}}>No gaps recorded yet for this project.</div>
+              )}
+              {gaps.map(g=>{
+                const cat = GAP_CATEGORIES.find(c=>c.id===g.category);
+                const pc = PRIORITY_COLORS[g.priority]||PRIORITY_COLORS.Low;
+                const days = g.targetDate?Math.ceil((new Date(g.targetDate)-new Date())/86400000):null;
+                return (
+                  <div key={g.id} style={{...S.card,marginBottom:8,borderLeft:`3px solid ${pc.fg}`}}>
+                    <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:8}}>
+                      <span style={{fontSize:20}}>{cat?.icon||"📌"}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14}}>{g.title}</div>
+                        <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                          <span style={S.badge(pc.bg,pc.fg)}>{g.priority} Priority</span>
+                          <span style={S.badge("#1E2A36","#6B8099")}>{cat?.label||g.category}</span>
+                          {g.owner && <span style={S.badge("#1E1A5F","#A5B4FC")}>👤 {g.owner}</span>}
+                          {days!==null && <span style={S.badge(days<=0?"#7F1D1D":days<=7?"#451A03":"#1E2A36",days<=0?"#FCA5A5":days<=7?"#FCD34D":"#6B8099")}>{days<=0?"Overdue":`${days}d`}</span>}
+                        </div>
+                      </div>
+                      <button style={{...S.btn("danger"),padding:"4px 8px",fontSize:11}} onClick={()=>delGap(g.id)}>×</button>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,fontSize:12}}>
+                      {g.currentState && <div><span style={{color:"#6B8099"}}>Current: </span><span style={{color:"#C8D8E8"}}>{g.currentState}</span></div>}
+                      {g.desiredState && <div><span style={{color:"#6B8099"}}>Desired: </span><span style={{color:"#6EE7B7"}}>{g.desiredState}</span></div>}
+                      {g.actionRequired && <div style={{gridColumn:"1/-1"}}><span style={{color:"#6B8099"}}>Action: </span><span style={{color:"#C8D8E8"}}>{g.actionRequired}</span></div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── NEW PROJECT TAB ── */}
+      {tab==="new" && (
+        <div>
+          <div style={{...S.card,marginBottom:12}}>
+            <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:14}}>📋 New Project Details</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={S.label}>Project / Client Name</div>
+                <select style={S.select} onChange={e=>e.target.value&&setNP("name",e.target.value)}>
+                  <option value="">Pick from master list...</option>
+                  {ALL_PROJECTS_LIST.map(p=><option key={p} value={p}>{p}</option>)}
+                </select>
+                <input style={{...S.input,marginTop:6}} value={newPlan.name} placeholder="Or type custom name..."
+                  onChange={e=>setNP("name",e.target.value)} />
+              </div>
+              <div><div style={S.label}>Client Name</div>
+                <input style={S.input} value={newPlan.client} onChange={e=>setNP("client",e.target.value)} /></div>
+              <div><div style={S.label}>Contract Value (KES)</div>
+                <input style={S.input} type="number" value={newPlan.contractValue} onChange={e=>setNP("contractValue",e.target.value)} /></div>
+              <div><div style={S.label}>Contract Start</div>
+                <input style={S.input} type="date" value={newPlan.contractStart} onChange={e=>setNP("contractStart",e.target.value)} /></div>
+              <div><div style={S.label}>Contract End</div>
+                <input style={S.input} type="date" value={newPlan.contractEnd} onChange={e=>setNP("contractEnd",e.target.value)} /></div>
+              <div><div style={S.label}>Mode</div>
+                <select style={S.select} value={newPlan.mode} onChange={e=>setNP("mode",e.target.value)}>
+                  {["Onsite","Offsite","Remote","Hybrid"].map(m=><option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div style={{gridColumn:"1/-1"}}><div style={S.label}>Project Objectives</div>
+                <textarea style={{...S.input,height:70,resize:"vertical"}} value={newPlan.objectives}
+                  placeholder="What are the main goals of this project..."
+                  onChange={e=>setNP("objectives",e.target.value)} /></div>
+              <div><div style={S.label}>In Scope</div>
+                <textarea style={{...S.input,height:60,resize:"vertical"}} value={newPlan.scope}
+                  placeholder="What is included..." onChange={e=>setNP("scope",e.target.value)} /></div>
+              <div><div style={S.label}>Out of Scope</div>
+                <textarea style={{...S.input,height:60,resize:"vertical"}} value={newPlan.outOfScope}
+                  placeholder="What is excluded..." onChange={e=>setNP("outOfScope",e.target.value)} /></div>
+            </div>
+          </div>
+
+          {/* Phase dates */}
+          <div style={{...S.card,marginBottom:12}}>
+            <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:12}}>🗂 Project Phases & Dates</div>
+            <div style={{fontSize:12,color:"#4A6480",marginBottom:10}}>Set start/end dates for each phase. These auto-create milestones and the Gantt chart.</div>
+            {newPlan.phases.map((ph,i)=>(
+              <div key={ph.id} style={{display:"grid",gridTemplateColumns:"auto 1fr 1fr 1fr 2fr",gap:8,
+                alignItems:"center",padding:"8px 0",borderBottom:"0.5px solid #1E2A36",fontSize:12}}>
+                <span style={{color:"#4A6480",minWidth:18,fontWeight:600}}>{i+1}.</span>
+                <span style={{color:"#C8D8E8",fontWeight:500}}>{ph.name}</span>
+                <input style={{...S.input,padding:"5px 8px",fontSize:12}} type="date" value={ph.startDate}
+                  placeholder="Start" onChange={e=>setNP("phases",newPlan.phases.map((p,j)=>j===i?{...p,startDate:e.target.value}:p))} />
+                <input style={{...S.input,padding:"5px 8px",fontSize:12}} type="date" value={ph.endDate}
+                  placeholder="End" onChange={e=>setNP("phases",newPlan.phases.map((p,j)=>j===i?{...p,endDate:e.target.value}:p))} />
+                <input style={{...S.input,padding:"5px 8px",fontSize:11}} value={ph.deliverables}
+                  placeholder="Key deliverables for this phase..."
+                  onChange={e=>setNP("phases",newPlan.phases.map((p,j)=>j===i?{...p,deliverables:e.target.value}:p))} />
+              </div>
+            ))}
+          </div>
+
+          <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+            <button style={S.btn("ghost")} onClick={()=>setNewPlan({name:"",client:"",contractValue:"",currency:"KES",contractStart:"",contractEnd:"",mode:"Onsite",objectives:"",scope:"",outOfScope:"",phases:PROJECT_PHASES.map((p,i)=>({id:`ph${i}`,name:p,startDate:"",endDate:"",status:"Pending",deliverables:"",resources:"",notes:""})),gaps:[],risks:[],assumptions:[]})}>Reset</button>
+            <button style={{...S.btn("primary"),padding:"10px 24px"}} onClick={saveNewProject} disabled={saving}>
+              {saving?"Creating...":"✓ Create Project"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── PHASES TAB (for existing projects) ── */}
+      {tab==="phases" && (
+        <div>
+          <div style={{...S.card,marginBottom:12}}>
+            <div style={S.label}>Select Project</div>
+            <select style={S.select} value={selProjId} onChange={e=>setSelProjId(e.target.value)}>
+              <option value="">Choose project...</option>
+              {projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          {selProj && (
+            <div style={S.card}>
+              <div style={{fontWeight:600,color:"#E8EDF2",fontSize:14,marginBottom:14}}>
+                Phase Plan — {selProj.name}
+              </div>
+              {(selProj.phases||PROJECT_PHASES.map((p,i)=>({id:`ph${i}`,name:p,startDate:"",endDate:"",status:"Pending",deliverables:""}))).map((ph,i)=>{
+                const now=new Date();
+                const start=ph.startDate?new Date(ph.startDate):null;
+                const end=ph.endDate?new Date(ph.endDate):null;
+                const isCurrent=start&&end&&now>=start&&now<=end;
+                const isPast=end&&now>end;
+                const statusColor=isCurrent?"#3B82F6":isPast?"#10B981":"#4A6480";
+                return (
+                  <div key={ph.id||i} style={{display:"flex",gap:12,padding:"10px 0",
+                    borderBottom:"0.5px solid #1E2A36",alignItems:"flex-start"}}>
+                    <div style={{width:24,height:24,borderRadius:"50%",
+                      background:isCurrent?"#1E3A5F":isPast?"#052E16":"#1E2A36",
+                      color:statusColor,display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:12,fontWeight:700,flexShrink:0,marginTop:2}}>
+                      {isPast?"✓":isCurrent?"▶":(i+1)}
+                    </div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:600,color:isCurrent?"#60A5FA":isPast?"#6EE7B7":"#C8D8E8",fontSize:13}}>
+                        {ph.name} {isCurrent&&<span style={{fontSize:10,color:"#60A5FA",marginLeft:4}}>← CURRENT</span>}
+                      </div>
+                      <div style={{fontSize:11,color:"#4A6480",marginTop:2}}>
+                        {ph.startDate||"—"} → {ph.endDate||"—"}
+                      </div>
+                      {ph.deliverables&&<div style={{fontSize:11,color:"#6B8099",marginTop:2}}>{ph.deliverables}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   GANTT CHART — Project Phases & Timelines
+   ═══════════════════════════════════════════════════════════════════ */
+function GanttView({projects, allocations}) {
+  const [viewMode, setViewMode] = useState("months"); // months | weeks
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [search, setSearch] = useState("");
+  const [hovered, setHovered] = useState(null);
+  const [tooltip, setTooltip] = useState(null);
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const filteredProjects = projects.filter(p=>
+    (filterStatus==="All"||p.status===filterStatus) &&
+    p.name.toLowerCase().includes(search.toLowerCase()) &&
+    p.contractStart && p.contractEnd
+  );
+
+  if (filteredProjects.length===0 && projects.length===0) return (
+    <div style={{...S.card,textAlign:"center",padding:60,color:"#4A6480"}}>
+      <div style={{fontSize:32,marginBottom:12}}>▤</div>
+      No projects with contract dates. Add projects with start and end dates to see the Gantt chart.
+    </div>
+  );
+
+  // Calculate chart date range
+  const allStarts = filteredProjects.map(p=>new Date(p.contractStart)).filter(d=>!isNaN(d));
+  const allEnds   = filteredProjects.map(p=>new Date(p.contractEnd)).filter(d=>!isNaN(d));
+  if (!allStarts.length) return <div style={{...S.card,textAlign:"center",padding:40,color:"#4A6480"}}>No projects with valid dates. Set contract start and end dates in Projects.</div>;
+
+  const minDate = new Date(Math.min(...allStarts));
+  const maxDate = new Date(Math.max(...allEnds));
+  minDate.setDate(1);
+  maxDate.setMonth(maxDate.getMonth()+1, 0);
+
+  const totalDays = Math.max(1, Math.ceil((maxDate-minDate)/86400000));
+
+  // Generate time headers
+  const headers = [];
+  if (viewMode==="months") {
+    const d = new Date(minDate);
+    while (d <= maxDate) {
+      headers.push({label:d.toLocaleDateString("en-KE",{month:"short",year:"2-digit"}),
+        date:new Date(d), days:new Date(d.getFullYear(),d.getMonth()+1,0).getDate()});
+      d.setMonth(d.getMonth()+1);
+    }
+  } else {
+    // Weeks
+    const d = new Date(minDate);
+    d.setDate(d.getDate() - d.getDay() + 1);
+    let wn = 1;
+    while (d <= maxDate) {
+      headers.push({label:`W${wn}`,date:new Date(d),days:7});
+      d.setDate(d.getDate()+7); wn++;
+    }
+  }
+
+  const getPos = (date) => {
+    const d = new Date(date); d.setHours(0,0,0,0);
+    return Math.max(0,Math.min(100,((d-minDate)/86400000/totalDays)*100));
+  };
+  const getWidth = (start,end) => {
+    const s=new Date(start); const e=new Date(end);
+    return Math.max(0.5,((e-s)/86400000/totalDays)*100);
+  };
+
+  const todayPos = getPos(today);
+
+  const STATUS_COLORS = {
+    Active:    {bar:"#3B82F6",light:"#1E3A5F"},
+    "On Hold": {bar:"#F59E0B",light:"#451A03"},
+    Completed: {bar:"#10B981",light:"#052E16"},
+    Cancelled: {bar:"#6B7280",light:"#1F2937"},
+  };
+
+  const PHASE_COLORS = [
+    "#3B82F6","#8B5CF6","#10B981","#F59E0B","#EF4444",
+    "#06B6D4","#84CC16","#F97316","#EC4899","#6366F1"
+  ];
+
+  const ROW_H = 44;
+  const LABEL_W = 200;
+  const CHART_W = "calc(100% - 200px)";
+
+  return (
+    <div>
+      <div style={{marginBottom:20}}>
+        <div style={S.hdr}>Gantt Chart</div>
+        <div style={S.subhdr}>Project phases, timelines and current status</div>
+      </div>
+
+      {/* Controls */}
+      <div style={{...S.card,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+        <input style={{...S.input,width:200}} placeholder="Search projects..." value={search}
+          onChange={e=>setSearch(e.target.value)} />
+        <select style={{...S.select,width:140}} value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}>
+          {["All","Active","On Hold","Completed","Cancelled"].map(s=><option key={s}>{s}</option>)}
+        </select>
+        {["months","weeks"].map(m=>(
+          <button key={m} style={{...S.btn(viewMode===m?"primary":"ghost"),padding:"8px 14px",fontSize:12,textTransform:"capitalize"}}
+            onClick={()=>setViewMode(m)}>{m}</button>
+        ))}
+        <div style={{fontSize:12,color:"#4A6480",marginLeft:"auto"}}>
+          {filteredProjects.length} project{filteredProjects.length!==1?"s":""} · {minDate.toLocaleDateString("en-KE",{month:"short",year:"numeric"})} – {maxDate.toLocaleDateString("en-KE",{month:"short",year:"numeric"})}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{display:"flex",gap:12,marginBottom:12,flexWrap:"wrap",fontSize:11}}>
+        {Object.entries(STATUS_COLORS).map(([s,c])=>(
+          <div key={s} style={{display:"flex",alignItems:"center",gap:4}}>
+            <div style={{width:16,height:8,borderRadius:4,background:c.bar}}/>
+            <span style={{color:"#6B8099"}}>{s}</span>
+          </div>
+        ))}
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <div style={{width:2,height:14,background:"#EF4444"}}/>
+          <span style={{color:"#6B8099"}}>Today</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <div style={{width:16,height:6,borderRadius:3,background:"#60A5FA",opacity:0.4,
+            border:"1px dashed #3B82F6"}}/>
+          <span style={{color:"#6B8099"}}>Phase</span>
+        </div>
+      </div>
+
+      {/* Gantt chart */}
+      <div style={{...S.card,padding:0,overflow:"hidden"}}>
+        {/* Header row */}
+        <div style={{display:"flex",borderBottom:"1px solid #1E2A36",background:"#0A1118"}}>
+          <div style={{width:LABEL_W,minWidth:LABEL_W,padding:"8px 14px",fontSize:11,
+            fontWeight:600,color:"#6B8099",borderRight:"1px solid #1E2A36",flexShrink:0}}>
+            PROJECT
+          </div>
+          <div style={{flex:1,position:"relative",overflow:"hidden",display:"flex"}}>
+            {headers.map((h,i)=>(
+              <div key={i} style={{
+                flex: h.days/totalDays,
+                minWidth: 0,
+                padding:"8px 4px",
+                fontSize:10,fontWeight:600,
+                color: h.date.getMonth()===today.getMonth()&&h.date.getFullYear()===today.getFullYear()
+                  ?"#60A5FA":"#4A6480",
+                borderRight:"0.5px solid #1E2A36",
+                textAlign:"center",whiteSpace:"nowrap",overflow:"hidden",
+              }}>{h.label}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* Project rows */}
+        <div style={{overflowY:"auto",maxHeight:"70vh"}}>
+          {filteredProjects.map((proj,pi)=>{
+            const sc = STATUS_COLORS[proj.status]||STATUS_COLORS.Active;
+            const startPct = getPos(proj.contractStart);
+            const widthPct = getWidth(proj.contractStart, proj.contractEnd);
+            const phaseDays = Math.ceil((new Date(proj.contractEnd)-new Date(proj.contractStart))/86400000);
+            const elapsed = Math.max(0,Math.ceil((today-new Date(proj.contractStart))/86400000));
+            const progressPct = phaseDays>0?Math.min(100,Math.round(elapsed/phaseDays*100)):0;
+            const isHov = hovered===proj.id;
+
+            // Get phases if defined
+            const phases = proj.phases||[];
+
+            return (
+              <div key={proj.id}
+                style={{display:"flex",borderBottom:"0.5px solid #1A2535",
+                  background:isHov?"#131F2E":"transparent",
+                  transition:"background 0.1s",minHeight:ROW_H+"px"}}
+                onMouseEnter={()=>setHovered(proj.id)}
+                onMouseLeave={()=>setHovered(null)}>
+
+                {/* Label */}
+                <div style={{width:LABEL_W,minWidth:LABEL_W,padding:"0 14px",
+                  display:"flex",flexDirection:"column",justifyContent:"center",
+                  borderRight:"1px solid #1E2A36",flexShrink:0}}>
+                  <div style={{fontWeight:600,fontSize:12,color:"#E8EDF2",
+                    whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}
+                    title={proj.name}>{proj.name}</div>
+                  <div style={{display:"flex",gap:4,marginTop:2,alignItems:"center"}}>
+                    <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,
+                      background:sc.light,color:sc.bar}}>{proj.status}</span>
+                    <span style={{fontSize:9,color:"#3D5266"}}>{proj.mode}</span>
+                  </div>
+                  <div style={{marginTop:3,height:3,background:"#1E2A36",borderRadius:2,width:"80%"}}>
+                    <div style={{height:"100%",width:`${progressPct}%`,
+                      background:proj.status==="Completed"?"#10B981":proj.status==="On Hold"?"#F59E0B":"#3B82F6",
+                      borderRadius:2}}/>
+                  </div>
+                </div>
+
+                {/* Chart area */}
+                <div style={{flex:1,position:"relative",height:ROW_H+"px",overflow:"hidden"}}>
+
+                  {/* Weekend/month separator lines */}
+                  {headers.map((h,i)=>{
+                    const x = headers.slice(0,i).reduce((s,hh)=>s+hh.days/totalDays*100,0);
+                    return <div key={i} style={{position:"absolute",left:`${x}%`,top:0,bottom:0,
+                      width:"0.5px",background:"#1A2535",pointerEvents:"none"}}/>;
+                  })}
+
+                  {/* Main contract bar */}
+                  <div style={{position:"absolute",
+                    left:`${startPct}%`,
+                    width:`${widthPct}%`,
+                    top:"50%",transform:"translateY(-50%)",
+                    height:16,borderRadius:8,
+                    background:sc.bar,opacity:0.85,
+                    minWidth:4,cursor:"pointer",
+                    transition:"opacity 0.15s",
+                  }}
+                    onMouseEnter={e=>{
+                      const rect=e.currentTarget.getBoundingClientRect();
+                      setTooltip({proj,x:rect.left,y:rect.top-80});
+                    }}
+                    onMouseLeave={()=>setTooltip(null)}
+                  >
+                    {/* Progress fill */}
+                    <div style={{position:"absolute",left:0,top:0,bottom:0,
+                      width:`${progressPct}%`,borderRadius:8,
+                      background:"rgba(255,255,255,0.3)"}}/>
+                  </div>
+
+                  {/* Phase bars (if phases defined with dates) */}
+                  {phases.filter(ph=>ph.startDate&&ph.endDate).map((ph,phI)=>{
+                    const phStart=getPos(ph.startDate);
+                    const phWidth=getWidth(ph.startDate,ph.endDate);
+                    const phNow=new Date()>=new Date(ph.startDate)&&new Date()<=new Date(ph.endDate);
+                    const phPast=new Date()>new Date(ph.endDate);
+                    return (
+                      <div key={ph.id||phI} style={{
+                        position:"absolute",
+                        left:`${phStart}%`,
+                        width:`${phWidth}%`,
+                        top:6,height:8,
+                        borderRadius:4,
+                        background:phPast?"#10B981":phNow?PHASE_COLORS[phI%PHASE_COLORS.length]:"transparent",
+                        border:`1px solid ${PHASE_COLORS[phI%PHASE_COLORS.length]}`,
+                        opacity:0.7,
+                        minWidth:4,
+                        cursor:"default",
+                      }} title={`${ph.name}: ${ph.startDate} – ${ph.endDate}`}/>
+                    );
+                  })}
+
+                  {/* Today line */}
+                  {todayPos>=0 && todayPos<=100 && (
+                    <div style={{position:"absolute",left:`${todayPos}%`,
+                      top:0,bottom:0,width:2,background:"#EF4444",
+                      opacity:0.9,pointerEvents:"none",zIndex:10}}>
+                      <div style={{position:"absolute",top:-2,left:"50%",transform:"translateX(-50%)",
+                        width:6,height:6,borderRadius:"50%",background:"#EF4444"}}/>
+                    </div>
+                  )}
+
+                  {/* Contract value label */}
+                  {widthPct>8 && (
+                    <div style={{position:"absolute",
+                      left:`${startPct+widthPct/2}%`,transform:"translateX(-50%)",
+                      top:"50%",marginTop:-7,
+                      fontSize:9,color:"#fff",fontWeight:600,
+                      pointerEvents:"none",whiteSpace:"nowrap",
+                      textShadow:"0 1px 2px rgba(0,0,0,0.8)"}}>
+                      KES {((proj.contractValue||0)/1000000).toFixed(1)}M
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div style={{position:"fixed",left:Math.min(tooltip.x,window.innerWidth-280),
+          top:Math.max(10,tooltip.y),
+          background:"#0A1118",border:"1px solid #263548",
+          borderRadius:10,padding:"12px 14px",zIndex:9999,
+          minWidth:260,boxShadow:"0 8px 24px rgba(0,0,0,0.5)",pointerEvents:"none"}}>
+          <div style={{fontWeight:700,color:"#E8EDF2",fontSize:13,marginBottom:6}}>{tooltip.proj.name}</div>
+          <div style={{fontSize:11,color:"#4A6480",lineHeight:1.8}}>
+            <div>Status: <span style={{color:STATUS_COLORS[tooltip.proj.status]?.bar||"#E8EDF2"}}>{tooltip.proj.status}</span></div>
+            <div>Contract: {tooltip.proj.contractStart} → {tooltip.proj.contractEnd}</div>
+            <div>Value: KES {(tooltip.proj.contractValue||0).toLocaleString()}</div>
+            <div>Phase: {tooltip.proj.phase||"—"}</div>
+            <div>Mode: {tooltip.proj.mode}</div>
+          </div>
+        </div>
+      )}
+
+      {filteredProjects.length===0 && (
+        <div style={{...S.card,textAlign:"center",padding:40,color:"#4A6480",marginTop:12}}>
+          No projects match your filter. Try changing the status filter or search.
+        </div>
+      )}
     </div>
   );
 }
