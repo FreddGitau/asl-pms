@@ -388,11 +388,18 @@ const TABLE_MAP = {
     toRow: (p) => ({ id:p.id, name:p.name, client:p.client||p.name, status:p.status||"Active",
       mode:p.mode||"Onsite", contract_start:p.contractStart||null, contract_end:p.contractEnd||null,
       contract_value:p.contractValue||0, currency:p.currency||"KES", phase:p.phase||null,
-      next_phase_date:p.nextPhaseDate||null, milestones:p.milestones||[] }),
+      next_phase_date:p.nextPhaseDate||null, milestones:p.milestones||[],
+      metadata: { gaps:p.gaps||[], phases:p.phases||[], objectives:p.objectives||"",
+        scope:p.scope||"", outOfScope:p.outOfScope||"" }
+    }),
     fromRow: (r) => ({ id:r.id, name:r.name, client:r.client, status:r.status,
       mode:r.mode, contractStart:r.contract_start||"", contractEnd:r.contract_end||"",
       contractValue:r.contract_value||0, currency:r.currency||"KES", phase:r.phase||"",
-      nextPhaseDate:r.next_phase_date||"", milestones:r.milestones||[] }),
+      nextPhaseDate:r.next_phase_date||"", milestones:r.milestones||[],
+      gaps:r.metadata?.gaps||[], phases:r.metadata?.phases||[],
+      objectives:r.metadata?.objectives||"", scope:r.metadata?.scope||"",
+      outOfScope:r.metadata?.outOfScope||""
+    }),
   },
   pms_techs: {
     table: "technicians",
@@ -403,18 +410,37 @@ const TABLE_MAP = {
   },
   pms_allocs: {
     table: "allocations",
-    toRow: (a) => ({ id:a.id, project_id:a.projectId, tech_id:a.techId,
+    toRow: (a) => ({
+      id:a.id, project_id:a.projectId, tech_id:a.techId,
       deliverable:a.deliverable||"", tasks:a.tasks||[], mode:a.mode||"Onsite",
-      date_from:a.dateFrom||null, date_to:a.dateTo||null, notes:a.notes||"" }),
-    fromRow: (r) => ({ id:r.id, projectId:r.project_id, techId:r.tech_id,
+      date_from:a.dateFrom||null, date_to:a.dateTo||null, notes:a.notes||"",
+      metadata: {
+        milestoneReport: a.milestoneReport||null,
+        gaps: a.gaps||[],
+      }
+    }),
+    fromRow: (r) => ({
+      id:r.id, projectId:r.project_id, techId:r.tech_id,
       deliverable:r.deliverable||"", tasks:r.tasks||[], mode:r.mode||"Onsite",
-      dateFrom:r.date_from||"", dateTo:r.date_to||"", notes:r.notes||"" }),
+      dateFrom:r.date_from||"", dateTo:r.date_to||"", notes:r.notes||"",
+      milestoneReport: r.metadata?.milestoneReport||null,
+      gaps: r.metadata?.gaps||[],
+    }),
   },
   pms_weekly: {
     table: "weekly_data",
     toRow: null, fromRow: null,
   },
-  pms_deliverables: null, // stored as JSON blob in weekly_data table with key "deliverables_list"
+  pms_planning: {
+    table: "weekly_data",
+    special: "planning_data", // stored as single row with week_key="planning_data"
+    toRow: null, fromRow: null,
+  },
+  pms_deliverables: {
+    table: "weekly_data",
+    special: "deliverables_list",
+    toRow: null, fromRow: null,
+  },
 };
 
 // ── Supabase-powered storage hook ───────────────────────────────────────────
@@ -442,18 +468,25 @@ function useStorage(key, init) {
         if (key === "pms_weekly") {
           const rows = await supa("weekly_data?select=week_key,data");
           const merged = {};
-          (rows||[]).forEach(r => { merged[r.week_key] = r.data; });
-          // Only use DB data if something exists, else keep init
+          (rows||[]).forEach(r => {
+            // Skip special config rows when loading weekly data
+            if (r.week_key !== "planning_data" && r.week_key !== "deliverables_list") {
+              merged[r.week_key] = r.data;
+            }
+          });
           if (Object.keys(merged).length > 0) setData(merged);
+        } else if (map.special) {
+          // Special single-row config storage (planning, deliverables)
+          const rows = await supa(`weekly_data?week_key=eq.${map.special}&select=data`);
+          if (rows && rows.length > 0 && rows[0].data) {
+            setData(rows[0].data);
+          }
         } else {
           const rows = await supa(map.table + "?select=*&order=created_at.asc");
           if (rows && rows.length > 0) {
-            // DB has data - use it (ignore seed/init)
             dbIds.current = new Set(rows.map(r => r.id));
             setData(rows.map(map.fromRow));
           }
-          // If rows is empty - keep init (seed data) but mark loaded
-          // so user can start adding and it will save
         }
       } catch(e) {
         console.warn("Supabase load failed, using local defaults:", e.message);
@@ -481,6 +514,12 @@ function useStorage(key, init) {
             { id: week_key, week_key, data: wdata, updated_at: new Date().toISOString() }
           );
         }
+      } else if (map.special) {
+        // Special single-row config: upsert as one blob
+        await supa("weekly_data?on_conflict=week_key", "POST", {
+          id: map.special, week_key: map.special,
+          data: newVal, updated_at: new Date().toISOString()
+        });
       } else {
         if (!Array.isArray(newVal)) return;
 
@@ -492,13 +531,12 @@ function useStorage(key, init) {
           dbIds.current.delete(id);
         }
 
-        // 2. Upsert all current records (insert new + update changed)
+        // 2. Upsert all current records
         if (newVal.length > 0) {
           const rows = newVal.map(map.toRow);
           for (let i = 0; i < rows.length; i += 50) {
             const batch = rows.slice(i, i + 50);
             await supa(`${map.table}?on_conflict=id`, "POST", batch);
-            // Track new IDs
             batch.forEach(r => dbIds.current.add(r.id));
           }
         }
